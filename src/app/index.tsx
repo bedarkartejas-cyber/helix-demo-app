@@ -2,12 +2,12 @@ import React from "react";
 import { HashRouter, Routes, Route, Link } from "react-router-dom";
 import ProductCatalog from "./catalog";
 import Questionnaire from "./Questionnaire";
+import ProductDetail from "./ProductDetail"; // <--- Import the new page
 
 function HomePage() {
     return (
         <div className="h-screen w-screen bg-black text-white flex overflow-hidden">
             {/* SECTION 1: Audio AI (Left 50%) */}
-            {/* Visualizes the "AI Assist" future mentioned in Phase 3 [cite: 41, 42] */}
             <section className="w-1/2 h-full flex flex-col items-center justify-center border-r border-zinc-800 bg-gradient-to-b from-black to-zinc-900">
                 <div className="w-32 h-32 rounded-full bg-blue-600 animate-pulse flex items-center justify-center shadow-[0_0_50px_rgba(37,99,235,0.4)]">
                     {/* Icon Placeholder */}
@@ -24,7 +24,6 @@ function HomePage() {
             {/* RIGHT SIDE CONTAINER (Right 50%) */}
             <div className="w-1/2 h-full flex flex-col">
                 {/* SECTION 2: AI-Lite Recommendation (Top Right 25%) */}
-                {/* Implements the "Guided, needs-based questionnaire" [cite: 17] */}
                 <Link to="/quiz" className="h-1/2">
                     <section className="h-full p-10 flex flex-col justify-center border-b border-zinc-800 bg-zinc-950 hover:bg-zinc-900 transition-colors cursor-pointer group">
                         <span className="text-helix-student font-bold uppercase tracking-widest text-xs mb-2">
@@ -40,8 +39,6 @@ function HomePage() {
                 </Link>
 
                 {/* SECTION 3: Product Catalog (Bottom Right 25%) */}
-                {/* Implements the "Family-based product listing" [cite: 19] */}
-                {/* The section is now wrapped in a Link component for navigation */}
                 <Link to="/catalog" className="h-1/2">
                     <section className="h-full p-10 flex flex-col justify-center bg-black hover:bg-zinc-950 transition-colors cursor-pointer group">
                         <span className="text-helix-gaming font-bold uppercase tracking-widest text-xs mb-2">
@@ -76,6 +73,9 @@ export default function App() {
                 <Route path="/" element={<HomePage />} />
                 <Route path="/catalog" element={<ProductCatalog />} />
                 <Route path="/quiz" element={<Questionnaire />} />
+                
+                {/* --- NEW ROUTE ADDED HERE --- */}
+                <Route path="/product/:id" element={<ProductDetail />} />
             </Routes>
         </HashRouter>
     );

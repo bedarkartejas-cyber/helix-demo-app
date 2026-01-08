@@ -3,43 +3,49 @@ import path from 'path';
 import fs from 'fs';
 import { app } from 'electron';
 
-// 1. Path determination remains the same
+// 1. Path determination
 const dbPath = app.isPackaged 
   ? path.join(app.getPath('userData'), 'v5_retail.db') 
   : 'v5_retail.db';
 
-let dbInstance: initSqlJs.Database; // Declare dbInstance with the correct type
+let dbInstance: initSqlJs.Database;
 
 /**
  * Saves the in-memory database back to the physical disk.
- * Critical for 'sql.js' because changes stay in RAM until exported.
  */
-function persistToDisk(db: initSqlJs.Database) { // Accept db as an argument
-  const data = db.export(); // Use the passed db argument
+function persistToDisk(db: initSqlJs.Database) {
+  const data = db.export();
   const buffer = Buffer.from(data);
   fs.writeFileSync(dbPath, buffer);
 }
 
 export async function setupDatabase() {
   // Load the WASM engine
-  const SQL = await initSqlJs({
-    // Point to the local wasm file.
-    locateFile: (file) => {
-      return app.isPackaged
-        ? path.join(process.resourcesPath, file)
-        : path.join(__dirname, '../../node_modules/sql.js/dist', file);
-    }
-  });
+  let SQL;
+  
+  if (app.isPackaged) {
+    // In Production (EXE): Load from the resources folder we configured
+    const initSqlJs = require(path.join(process.resourcesPath, 'sql-wasm.js'));
+    SQL = await initSqlJs({
+      locateFile: (file: string) => path.join(process.resourcesPath, file)
+    });
+  } else {
+    // In Development: Load from node_modules normally
+    const initSqlJs = require('sql.js');
+    SQL = await initSqlJs({
+       locateFile: (file: string) => path.join(__dirname, '../../node_modules/sql.js/dist', file)
+    });
+  }
 
   // Load existing data if it exists, otherwise create new
   if (fs.existsSync(dbPath)) {
     const fileBuffer = fs.readFileSync(dbPath);
-    dbInstance = new SQL.Database(fileBuffer); // Use dbInstance consistently
-  } else { // If database file doesn't exist, create a new in-memory database
+    dbInstance = new SQL.Database(fileBuffer);
+  } else {
     dbInstance = new SQL.Database();
   }
 
-  // 3. Create tables only if they are missing
+  // Create tables
   dbInstance.run(`
     CREATE TABLE IF NOT EXISTS personas ( 
         id TEXT PRIMARY KEY,
@@ -78,70 +84,284 @@ export async function setupDatabase() {
     );
   `);
 
-  persistToDisk(dbInstance); // Pass dbInstance to persistToDisk
+  persistToDisk(dbInstance);
   console.log(`sql.js initialized at: ${dbPath}`);
-  return dbInstance; // Return the initialized database instance
+  return dbInstance;
 }
 
-export function seedDatabase(db: initSqlJs.Database) { // Accept the database instance as an argument
-  // Note: sql.js does not support .pragma() via helper methods, use .run()
+export function seedDatabase(db: initSqlJs.Database) {
   db.run('PRAGMA foreign_keys = ON');
 
-  // Insert Personas
+  // --- STEP 1: CLEAR OLD DATA ---
+  console.log("Clearing old data to prevent duplicates...");
+  db.run('DELETE FROM product_specs');
+  db.run('DELETE FROM product_media');
+  db.run('DELETE FROM products');
+  db.run('DELETE FROM personas');
+
+  // --- STEP 2: INSERT PERSONAS ---
   const personas = [
     ['gaming', 'Gaming', 'media/screensavers/gaming_helix.mp4', '#FF4500'],
     ['creator', 'Creator', 'media/screensavers/creator_helix.mp4', '#9333EA'],
     ['office', 'Office', 'media/screensavers/office_helix.mp4', '#2563EB'],
     ['student', 'Student', 'media/screensavers/student_helix.mp4', '#10B981']
   ];
-
   personas.forEach(p => {
-    db.run(`INSERT OR IGNORE INTO personas (id, name, screensaver_path, theme_color) VALUES (?, ?, ?, ?)`, p);
+    db.run(`INSERT INTO personas (id, name, screensaver_path, theme_color) VALUES (?, ?, ?, ?)`, p);
   });
 
-  // Insert Products [cite: 14]
+  // --- STEP 3: INSERT PRODUCTS (12 Models) ---
   const allProducts = [
-    // Gaming
     ['omen-17', 'OMEN 17', 'gaming', 'Desktop-class power in a portable form factor.'],
     ['omen-16', 'OMEN 16', 'gaming', 'The perfectly balanced engine for competitive play.'],
     ['victus-16', 'Victus 16', 'gaming', 'Serious gaming performance at an accessible value.'],
-    // Creator
     ['spectre-16', 'Spectre x360 16', 'creator', 'A 16-inch canvas for your biggest creative ideas.'],
     ['envy-16', 'Envy 16', 'creator', 'Power and precision for editing 4K video on the go.'],
     ['pavilion-plus-14-oled', 'Pavilion Plus 14 OLED', 'creator', 'Compact creator power with a stunning OLED display.'],
-    // Office
     ['elitebook-840', 'EliteBook 840 G10', 'office', 'The corporate standard for security and performance.'],
     ['probook-450', 'ProBook 450 G10', 'office', 'Essential business power for the modern professional.'],
     ['elite-x360', 'Elite x360 830', 'office', 'Premium flexibility for executive leaders.'],
-    // Student
     ['pavilion-14-std', 'Pavilion Plus 14', 'student', 'The all-day companion for lectures and late-night study.'],
     ['pavilion-x360', 'Pavilion x360 14', 'student', 'The versatile laptop for taking notes and streaming movies.'],
     ['hp-laptop-15', 'HP Laptop 15', 'student', 'Affordable, reliable, and ready for every assignment.']
   ];
-
   allProducts.forEach(p => {
-    db.run(`INSERT OR IGNORE INTO products (id, model_name, persona_id, hero_description) VALUES (?, ?, ?, ?)`, p);
+    db.run(`INSERT INTO products (id, model_name, persona_id, hero_description) VALUES (?, ?, ?, ?)`, p);
   });
 
-  // Insert Human-Centric Specs [cite: 4, 20]
-  const allSpecs = [
-    ['omen-17', 'Performance', 'Crush AAA titles with pro-level frame rates.', 'GiRocket'],
-    ['omen-17', 'Cooling', 'Omen Tempest Cooling stays quiet during long raids.', 'FiWind'],
-    ['spectre-16', 'Display', 'Vibrant OLED touch screen with pro-grade color accuracy.', 'FiEdit'],
-    ['spectre-16', 'Flexibility', 'Flips 360 degrees to go from laptop to creative tablet.', 'FiRefreshCw'],
-    ['elitebook-840', 'Collaboration', 'AI-enhanced video and audio for crystal-clear calls.', 'FiUsers'],
-    ['elitebook-840', 'Security', 'Hardware-level protection to keep your data safe.', 'FiLock'],
-    ['pavilion-14-std', 'Battery', 'Lasts through your longest school day on one charge.', 'FiBattery'],
-    ['pavilion-14-std', 'Sustainability', 'Built with recycled materials for a greener future.', 'FiGlobe']
+  // --- STEP 4: INSERT DETAILED SPECS ---
+  const techSpecs = [
+    // --- OMEN 17 ---
+    ['omen-17', 'Processor', 'Intel® Core™ i9-13900HX', '24 Cores (8P+16E), up to 5.4 GHz', 'FiCpu'],
+    ['omen-17', 'Graphics', 'NVIDIA® GeForce RTX™ 4080', '12 GB GDDR6 Dedicated', 'FiZap'],
+    ['omen-17', 'Memory', '32 GB DDR5-5600 MHz', '2 x 16 GB (Upgradable)', 'FiServer'],
+    ['omen-17', 'Storage', '2 TB PCIe® Gen4 NVMe™ SSD', '7000 MB/s Read Speed', 'FiHardDrive'],
+    ['omen-17', 'Display', '17.3" QHD (2560 x 1440)', '240Hz, 3ms, IPS, 100% sRGB', 'FiMonitor'],
+    ['omen-17', 'Cooling', 'OMEN Tempest Cooling', '3-sided venting, 5-way airflow', 'FiWind'],
+    ['omen-17', 'Keyboard', 'Optical Mech RGB', 'Per-key RGB, NKRO', 'FiType'],
+    ['omen-17', 'Audio', 'Audio by Bang & Olufsen', 'DTS:X® Ultra, Dual Speakers', 'FiHeadphones'],
+    ['omen-17', 'Connectivity', 'Wi-Fi 6E AX211', 'Bluetooth® 5.3', 'FiWifi'],
+    ['omen-17', 'Ports', '1x Thunderbolt™ 4', '3x USB-A, 1x HDMI 2.1, 1x RJ-45', 'FiLayout'],
+    ['omen-17', 'Battery', '83 Wh Li-ion polymer', '330W Smart AC Adapter', 'FiBattery'],
+    ['omen-17', 'OS', 'Windows 11 Home', 'High-end Gaming optimized', 'FiCommand'],
+
+    // --- OMEN 16 ---
+    ['omen-16', 'Processor', 'Intel® Core™ i7-13700HX', '16 Cores, up to 5.0 GHz', 'FiCpu'],
+    ['omen-16', 'Graphics', 'NVIDIA® GeForce RTX™ 4060', '8 GB GDDR6 Dedicated', 'FiZap'],
+    ['omen-16', 'Memory', '16 GB DDR5-4800 MHz', '2 x 8 GB', 'FiServer'],
+    ['omen-16', 'Storage', '1 TB PCIe® Gen4 NVMe™ SSD', 'High-speed loading', 'FiHardDrive'],
+    ['omen-16', 'Display', '16.1" FHD (1920 x 1080)', '165Hz, 7ms, IPS, Low Blue Light', 'FiMonitor'],
+    ['omen-16', 'Thermal', 'Omen Tempest Cooling', 'IR Thermopile Sensor', 'FiWind'],
+    ['omen-16', 'Audio', 'Audio by Bang & Olufsen', 'HP Audio Boost', 'FiHeadphones'],
+    ['omen-16', 'Webcam', 'HP True Vision 1080p', 'Temporal Noise Reduction', 'FiVideo'],
+    ['omen-16', 'Connectivity', 'Wi-Fi 6E (2x2)', 'Bluetooth® 5.3', 'FiWifi'],
+    ['omen-16', 'Ports', '1x USB-C® (DisplayPort™)', '3x USB-A, 1x HDMI 2.1, 1x RJ-45', 'FiLayout'],
+    ['omen-16', 'Battery', '83 Wh Li-ion polymer', 'Fast Charge (50% in 30 min)', 'FiBattery'],
+    ['omen-16', 'OS', 'Windows 11 Home', 'Game Pass Included (1 Month)', 'FiCommand'],
+
+    // --- VICTUS 16 ---
+    ['victus-16', 'Processor', 'AMD Ryzen™ 7 7840HS', '8 Cores, 16 Threads, AI Engine', 'FiCpu'],
+    ['victus-16', 'Graphics', 'NVIDIA® GeForce RTX™ 4050', '6 GB GDDR6 Dedicated', 'FiZap'],
+    ['victus-16', 'Memory', '16 GB DDR5-5600 MHz', '2 x 8 GB', 'FiServer'],
+    ['victus-16', 'Display', '16.1" FHD (1920 x 1080)', '144Hz, IPS, Micro-edge', 'FiMonitor'],
+    ['victus-16', 'Design', 'Performance Blue', 'Paint finish', 'FiDroplet'],
+    ['victus-16', 'Keyboard', 'Full-size Backlit', 'Numeric keypad included', 'FiType'],
+    ['victus-16', 'Audio', 'Audio by B&O', 'Dual Speakers', 'FiHeadphones'],
+    ['victus-16', 'Connectivity', 'Wi-Fi 6E (2x2)', 'Bluetooth® 5.3', 'FiWifi'],
+    ['victus-16', 'Ports', '1x USB-C®, 3x USB-A', '1x HDMI 2.1, 1x RJ-45', 'FiLayout'],
+    ['victus-16', 'Battery', '70 Wh Li-ion polymer', '230W Smart AC Adapter', 'FiBattery'],
+    ['victus-16', 'OS', 'Windows 11 Home', 'OMEN Gaming Hub installed', 'FiCommand'],
+
+    // --- SPECTRE 16 ---
+    ['spectre-16', 'Processor', 'Intel® Core™ Ultra 7 155H', '16 Cores, AI Boost NPU', 'FiCpu'],
+    ['spectre-16', 'Graphics', 'NVIDIA® GeForce RTX™ 4050', 'Laptop GPU (6 GB)', 'FiZap'],
+    ['spectre-16', 'Display', '16" 2.8K (2880 x 1800) OLED', 'Touch, 120Hz, HDR 500, VRR', 'FiEye'],
+    ['spectre-16', 'Memory', '32 GB LPDDR5x-6400', 'Onboard (High Bandwidth)', 'FiServer'],
+    ['spectre-16', 'Webcam', 'HP Wide Vision 9MP IR', 'Night mode, AI Auto Frame', 'FiVideo'],
+    ['spectre-16', 'Audio', 'Poly Studio Quad Speakers', 'DTS:X® Ultra', 'FiHeadphones'],
+    ['spectre-16', 'Input', 'HP Rechargeable MPP2.0 Pen', 'Tilt Pen Included', 'FiPenTool'],
+    ['spectre-16', 'Connectivity', 'Intel® Wi-Fi 7 BE200', 'Bluetooth® 5.4', 'FiWifi'],
+    ['spectre-16', 'Ports', '2x Thunderbolt™ 4', '1x USB-A, 1x HDMI 2.1', 'FiLayout'],
+    ['spectre-16', 'Features', 'Haptic Touchpad', 'Walk Away Lock / Wake on Approach', 'FiLock'],
+    ['spectre-16', 'Battery', '83 Wh Li-ion polymer', '100W USB-C Adapter', 'FiBattery'],
+    ['spectre-16', 'OS', 'Windows 11 Home', 'AI-enhanced creative tools', 'FiCommand'],
+
+    // --- ENVY 16 ---
+    ['envy-16', 'Processor', 'Intel® Core™ i9-13900H', '14 Cores, up to 5.4 GHz', 'FiCpu'],
+    ['envy-16', 'Graphics', 'NVIDIA® GeForce RTX™ 4060', '8 GB GDDR6', 'FiZap'],
+    ['envy-16', 'Display', '16" WQXGA (2560 x 1600)', '120Hz, IPS, 100% sRGB, 400 nits', 'FiMonitor'],
+    ['envy-16', 'Storage', '1 TB PCIe® Gen4 NVMe™', 'Performance SSD', 'FiHardDrive'],
+    ['envy-16', 'Cooling', 'Vapor Chamber', 'Advanced thermal management', 'FiWind'],
+    ['envy-16', 'Audio', 'Bang & Olufsen', 'Quad Speakers', 'FiHeadphones'],
+    ['envy-16', 'Connectivity', 'Wi-Fi 6E (2x2)', 'Bluetooth® 5.3', 'FiWifi'],
+    ['envy-16', 'Ports', '2x Thunderbolt™ 4', '2x USB-A, 1x HDMI 2.1, MicroSD', 'FiLayout'],
+    ['envy-16', 'Webcam', '5MP IR Camera', 'True Vision, Privacy Shutter', 'FiVideo'],
+    ['envy-16', 'Battery', '83 Wh Li-ion', 'Up to 10 hours mixed usage', 'FiBattery'],
+    ['envy-16', 'OS', 'Windows 11 Home', 'HP QuickDrop included', 'FiCommand'],
+
+    // --- PAVILION PLUS 14 OLED ---
+    ['pavilion-plus-14-oled', 'Display', '14" 2.8K (2880 x 1800) OLED', 'IMAX Enhanced, 120Hz, 500 nits', 'FiEye'],
+    ['pavilion-plus-14-oled', 'Processor', 'AMD Ryzen™ 7 7840U', '8 Cores, Power Efficient', 'FiCpu'],
+    ['pavilion-plus-14-oled', 'Weight', '3.06 lbs (1.38 kg)', 'All-Metal Recycled Chassis', 'FiFeather'],
+    ['pavilion-plus-14-oled', 'Memory', '16 GB LPDDR5x-6400', 'Onboard', 'FiServer'],
+    ['pavilion-plus-14-oled', 'Graphics', 'AMD Radeon™ 780M', 'Integrated Graphics', 'FiZap'],
+    ['pavilion-plus-14-oled', 'Webcam', '5MP IR Wide Vision', 'Temporal Noise Reduction', 'FiVideo'],
+    ['pavilion-plus-14-oled', 'Audio', 'Audio by B&O', 'Dual Speakers', 'FiHeadphones'],
+    ['pavilion-plus-14-oled', 'Connectivity', 'Wi-Fi 6E', 'Bluetooth® 5.3', 'FiWifi'],
+    ['pavilion-plus-14-oled', 'Ports', '2x USB-C® 10Gbps', '2x USB-A, 1x HDMI 2.1', 'FiLayout'],
+    ['pavilion-plus-14-oled', 'Battery', '68 Wh Li-ion', 'Up to 13h Video Playback', 'FiBattery'],
+    ['pavilion-plus-14-oled', 'OS', 'Windows 11 Home', 'EPEAT® Gold Registered', 'FiGlobe'],
+
+    // --- ELITEBOOK 840 G10 ---
+    ['elitebook-840', 'Security', 'HP Wolf Pro Security', 'BIOS protection, Sure Click', 'FiLock'],
+    ['elitebook-840', 'Processor', 'Intel® Core™ i7-1365U', 'vPro® Enterprise Enabled', 'FiCpu'],
+    ['elitebook-840', 'Display', '14" WUXGA (1920 x 1200)', 'IPS, Anti-glare, 400 nits', 'FiMonitor'],
+    ['elitebook-840', 'Memory', '32 GB DDR5-5200', '2 SODIMM Slots (Replaceable)', 'FiServer'],
+    ['elitebook-840', 'Webcam', '5MP IR Camera', 'Dual array mics, AI Noise Reduction', 'FiVideo'],
+    ['elitebook-840', 'Connectivity', '5G LTE Optional', 'Wi-Fi 6E, NFC', 'FiWifi'],
+    ['elitebook-840', 'Audio', 'Audio by Bang & Olufsen', 'Dual stereo speakers', 'FiHeadphones'],
+    ['elitebook-840', 'Ports', '2x Thunderbolt™ 4', '2x USB-A, 1x HDMI 2.1, SmartCard', 'FiLayout'],
+    ['elitebook-840', 'Biometrics', 'Fingerprint Sensor', 'IR Face Recognition', 'FiLock'],
+    ['elitebook-840', 'OS', 'Windows 11 Pro', 'Downgrade rights to Win 10 Pro', 'FiCommand'],
+
+    // --- PROBOOK 450 G10 ---
+    ['probook-450', 'Durability', 'MIL-STD 810H Certified', 'Drop, Shock, Dust Resistant', 'FiShield'],
+    ['probook-450', 'Processor', 'Intel® Core™ i5-1335U', '10 Cores, Efficient Business Power', 'FiCpu'],
+    ['probook-450', 'Display', '15.6" FHD (1920 x 1080)', 'IPS, Narrow Bezel, 250 nits', 'FiMonitor'],
+    ['probook-450', 'Upgrade', 'Serviceable Design', 'Tool-less access to RAM/SSD', 'FiTool'],
+    ['probook-450', 'Memory', '16 GB DDR4-3200', '2 SODIMM slots', 'FiServer'],
+    ['probook-450', 'Storage', '512 GB PCIe® NVMe™', 'Value SSD', 'FiHardDrive'],
+    ['probook-450', 'Ports', '1x RJ-45 Ethernet', '1x USB-C®, 3x USB-A, HDMI 2.1', 'FiLayout'],
+    ['probook-450', 'Webcam', '720p HD Camera', 'Privacy Shutter', 'FiVideo'],
+    ['probook-450', 'Connectivity', 'Wi-Fi 6E', 'Bluetooth® 5.3', 'FiWifi'],
+    ['probook-450', 'OS', 'Windows 11 Pro', 'Business Class', 'FiCommand'],
+
+    // --- ELITE x360 830 ---
+    ['elite-x360', 'Form Factor', '2-in-1 Convertible', 'Laptop, Tent, Stand, Tablet', 'FiRefreshCw'],
+    ['elite-x360', 'Privacy', 'HP Sure View Reflect', 'Instant electronic privacy screen', 'FiEyeOff'],
+    ['elite-x360', 'Input', 'Touch & Active Pen', 'Wacom AES 2.0 Support', 'FiPenTool'],
+    ['elite-x360', 'Weight', '2.9 lbs (1.3 kg)', 'Magnesium Unibody', 'FiFeather'],
+    ['elite-x360', 'Processor', 'Intel® Core™ i7-1355U', '10 Cores, vPro®', 'FiCpu'],
+    ['elite-x360', 'Display', '13.3" WUXGA (1920 x 1200)', '1000 nits, Sure View', 'FiEye'],
+    ['elite-x360', 'Connectivity', 'Wi-Fi 6E', '4G LTE Advanced Pro (Cat 16)', 'FiWifi'],
+    ['elite-x360', 'Audio', 'Audio by Bang & Olufsen', 'AI-based noise reduction', 'FiHeadphones'],
+    ['elite-x360', 'Ports', '2x Thunderbolt™ 4', '2x USB-A, HDMI 2.1', 'FiLayout'],
+    ['elite-x360', 'OS', 'Windows 11 Pro', 'Enterprise Ready', 'FiCommand'],
+
+    // --- PAVILION 14 PLUS (Student) ---
+    ['pavilion-14-std', 'Battery', 'Up to 10h 45m', 'HP Fast Charge (50% in 45m)', 'FiBattery'],
+    ['pavilion-14-std', 'Processor', 'Intel® Core™ i3-1315U', '6 Cores, Efficient Performance', 'FiCpu'],
+    ['pavilion-14-std', 'Display', '14" FHD (1920 x 1080)', 'IPS, Micro-edge', 'FiMonitor'],
+    ['pavilion-14-std', 'Storage', '512 GB NVMe™ SSD', 'Fast boot and file load', 'FiHardDrive'],
+    ['pavilion-14-std', 'Audio', 'Audio by B&O', 'Dual Speakers, HP Audio Boost', 'FiHeadphones'],
+    ['pavilion-14-std', 'Weight', '3.09 lbs', 'Easy to carry', 'FiFeather'],
+    ['pavilion-14-std', 'Connectivity', 'Wi-Fi 6', 'Bluetooth® 5.3', 'FiWifi'],
+    ['pavilion-14-std', 'Ports', '1x USB-C®, 2x USB-A', 'HDMI 2.1, Headphone jack', 'FiLayout'],
+    ['pavilion-14-std', 'Webcam', 'HP Wide Vision 720p', 'Integrated dual array mics', 'FiVideo'],
+    ['pavilion-14-std', 'OS', 'Windows 11 Home in S mode', 'Secure and Fast', 'FiCommand'],
+
+    // --- PAVILION x360 14 ---
+    ['pavilion-x360', 'Mode', 'x360 Hinge', 'Note-taking & Streaming modes', 'FiRefreshCw'],
+    ['pavilion-x360', 'Display', '14" FHD (1920 x 1080)', 'Multitouch-enabled, Edge-to-edge', 'FiMonitor'],
+    ['pavilion-x360', 'Processor', 'Intel® Core™ i5-1335U', '10 Cores, 4.6 GHz Turbo', 'FiCpu'],
+    ['pavilion-x360', 'Storage', '512 GB PCIe® NVMe™', 'M.2 SSD', 'FiHardDrive'],
+    ['pavilion-x360', 'Connectivity', 'Wi-Fi 6 (2x2)', 'Gigabit speeds for streaming', 'FiWifi'],
+    ['pavilion-x360', 'Input', 'HP Rechargeable Pen', 'Magnetic attachment (Optional)', 'FiPenTool'],
+    ['pavilion-x360', 'Audio', 'Audio by B&O', 'Dual Speakers', 'FiHeadphones'],
+    ['pavilion-x360', 'Ports', '1x USB-C® (Power Delivery)', '2x USB-A, HDMI 2.1', 'FiLayout'],
+    ['pavilion-x360', 'Battery', '43 Wh Li-ion', 'Up to 9 hours', 'FiBattery'],
+    ['pavilion-x360', 'OS', 'Windows 11 Home', 'Touch optimized', 'FiCommand'],
+
+    // --- HP LAPTOP 15 ---
+    ['hp-laptop-15', 'Screen Size', '15.6" Full HD', 'Anti-glare, Micro-edge bezel', 'FiMonitor'],
+    ['hp-laptop-15', 'Processor', 'AMD Ryzen™ 5 7520U', 'Reliable Quad-Core performance', 'FiCpu'],
+    ['hp-laptop-15', 'Memory', '8 GB LPDDR5-5500', 'Fast onboard RAM', 'FiServer'],
+    ['hp-laptop-15', 'Storage', '256 GB SSD', 'Reliable storage', 'FiHardDrive'],
+    ['hp-laptop-15', 'Keyboard', 'Full-size with NumPad', 'Integrated numeric keypad', 'FiLayout'],
+    ['hp-laptop-15', 'Webcam', 'HP True Vision 720p', 'Privacy shutter', 'FiVideo'],
+    ['hp-laptop-15', 'Mic', 'Dual array microphones', 'AI noise reduction', 'FiMic'],
+    ['hp-laptop-15', 'Value', 'EPEAT® Gold Registered', 'Ocean-bound plastic construction', 'FiGlobe'],
+    ['hp-laptop-15', 'Connectivity', 'Wi-Fi 6', 'Bluetooth® 5.3', 'FiWifi'],
+    ['hp-laptop-15', 'OS', 'Windows 11 Home', 'Everyday essentials', 'FiCommand']
   ];
 
-  allSpecs.forEach(s => {
-    db.run(`INSERT OR IGNORE INTO product_specs (product_id, label, human_value, icon_name) VALUES (?, ?, ?, ?)`, s);
+  techSpecs.forEach(s => {
+    db.run(`INSERT INTO product_specs (product_id, label, human_value, tech_value, icon_name) VALUES (?, ?, ?, ?, ?)`, s);
   });
 
-  // Save changes from RAM to Disk
-  persistToDisk(db); // Pass the db argument to persistToDisk
-  console.log("Database seeded successfully via sql.js");
+  // --- STEP 5: INSERT ONLINE MEDIA LINKS ---
+  
+  // Define your Base URL
+  const repoBaseUrl = 'https://raw.githubusercontent.com/bedarkartejas-cyber/helix-images/main';
+
+  const onlineMedia = [
+    // OMEN 17
+    ['omen-17', 'image', `${repoBaseUrl}/Omen%2017/Img1.jpg`, 1, 1],
+    ['omen-17', 'image', `https://github.com/bedarkartejas-cyber/helix-images/blob/main/Omen%2017/img2.jpg?raw=true`, 2, 0],
+    ['omen-17', 'image', `https://github.com/bedarkartejas-cyber/helix-images/blob/main/Omen%2017/img3.jpg?raw=true`, 3, 0],
+
+    // OMEN 16
+    ['omen-16', 'image', `https://github.com/bedarkartejas-cyber/helix-images/blob/main/Omen%2016/img1.jpg?raw=true`, 1, 1],
+    ['omen-16', 'image', `https://github.com/bedarkartejas-cyber/helix-images/blob/main/Omen%2016/img2.jpg?raw=true`, 2, 0],
+    ['omen-16', 'image', `https://github.com/bedarkartejas-cyber/helix-images/blob/main/Omen%2016/img3.jpg?raw=true`, 3, 0],
+
+    // VICTUS 16
+    ['victus-16', 'image', `https://github.com/bedarkartejas-cyber/helix-images/blob/main/Victus%2016/img1.jpg?raw=true`, 1, 1],
+    ['victus-16', 'image', `https://github.com/bedarkartejas-cyber/helix-images/blob/main/Victus%2016/img2.jpg?raw=true`, 2, 0],
+    ['victus-16', 'image', `https://github.com/bedarkartejas-cyber/helix-images/blob/main/Victus%2016/img3.jpg?raw=true`, 3, 0],
+
+    // SPECTRE 16
+    ['spectre-16', 'image', `https://github.com/bedarkartejas-cyber/helix-images/blob/main/Spectre%20x360%2016/img2.jpg?raw=true`, 1, 1],
+    ['spectre-16', 'image', `https://github.com/bedarkartejas-cyber/helix-images/blob/main/Spectre%20x360%2016/img3.jpg?raw=true`, 2, 0],
+    ['spectre-16', 'image', `https://github.com/bedarkartejas-cyber/helix-images/blob/main/Spectre%20x360%2016/img4.jpg?raw=true`, 3, 0],
+
+    // ENVY 16
+    ['envy-16', 'image', `https://github.com/bedarkartejas-cyber/helix-images/blob/main/Envy%2016/img1.jpg?raw=true`, 1, 1],
+    ['envy-16', 'image', `https://github.com/bedarkartejas-cyber/helix-images/blob/main/Envy%2016/img2.jpg?raw=true`, 2, 0],
+    ['envy-16', 'image', `https://github.com/bedarkartejas-cyber/helix-images/blob/main/Envy%2016/img3.jpg?raw=true`, 3, 0],
+
+    // PAVILION PLUS 14 OLED
+    ['pavilion-plus-14-oled', 'image', `https://github.com/bedarkartejas-cyber/helix-images/blob/main/Pavillion%20Plus%2014%20OLED/img.jpg?raw=true`, 1, 1],
+    ['pavilion-plus-14-oled', 'image', `https://github.com/bedarkartejas-cyber/helix-images/blob/main/Pavillion%20Plus%2014%20OLED/img2.jpg?raw=true`, 2, 0],
+    ['pavilion-plus-14-oled', 'image', `https://github.com/bedarkartejas-cyber/helix-images/blob/main/Pavillion%20Plus%2014%20OLED/img4.jpg?raw=true`, 3, 0],
+
+    // ELITEBOOK 840
+    ['elitebook-840', 'image', `https://github.com/bedarkartejas-cyber/helix-images/blob/main/EliteBook%20840%20g10/img1.jpg?raw=true`, 1, 1],
+    ['elitebook-840', 'image', `https://github.com/bedarkartejas-cyber/helix-images/blob/main/EliteBook%20840%20g10/img2.jpg?raw=true`, 2, 0],
+    ['elitebook-840', 'image', `https://github.com/bedarkartejas-cyber/helix-images/blob/main/EliteBook%20840%20g10/img3.jpg?raw=true`, 3, 0],
+
+    // PROBOOK 450
+    ['probook-450', 'image', `https://github.com/bedarkartejas-cyber/helix-images/blob/main/probook%20450%20G10/img1.jpg?raw=true`, 1, 1],
+    ['probook-450', 'image', `https://github.com/bedarkartejas-cyber/helix-images/blob/main/probook%20450%20G10/img2.jpg?raw=true`, 2, 0],
+    ['probook-450', 'image', `https://github.com/bedarkartejas-cyber/helix-images/blob/main/probook%20450%20G10/img3.jpg?raw=true`, 3, 0],
+
+    // ELITE x360
+    ['elite-x360', 'image', `https://github.com/bedarkartejas-cyber/helix-images/blob/main/Elite%20x360%20830/img2.jpg?raw=true`, 1, 1],
+    ['elite-x360', 'image', `https://github.com/bedarkartejas-cyber/helix-images/blob/main/Elite%20x360%20830/img1.jpg?raw=true`, 2, 0],
+    ['elite-x360', 'image', `https://github.com/bedarkartejas-cyber/helix-images/blob/main/Elite%20x360%20830/img3.jpg?raw=true`, 3, 0],
+
+    // PAVILION 14 (Student)
+    ['pavilion-14-std', 'image', `https://github.com/bedarkartejas-cyber/helix-images/blob/main/PavillionPlus14/img1.jpg?raw=true`, 1, 1],
+    ['pavilion-14-std', 'image', `https://github.com/bedarkartejas-cyber/helix-images/blob/main/PavillionPlus14/img2.jpg?raw=true`, 2, 0],
+    ['pavilion-14-std', 'image', `https://github.com/bedarkartejas-cyber/helix-images/blob/main/PavillionPlus14/img3.jpg?raw=true`, 3, 0],
+
+    // PAVILION x360
+    ['pavilion-x360', 'image', `https://github.com/bedarkartejas-cyber/helix-images/blob/main/Pavillion%20x360%2014/img2.jpg?raw=true`, 1, 1],
+    ['pavilion-x360', 'image', `https://github.com/bedarkartejas-cyber/helix-images/blob/main/Pavillion%20x360%2014/img3.jpg?raw=true`, 2, 0],
+    ['pavilion-x360', 'image', `https://github.com/bedarkartejas-cyber/helix-images/blob/main/Pavillion%20x360%2014/img4.jpg?raw=true`, 3, 0],
+
+    // HP LAPTOP 15
+    ['hp-laptop-15', 'image', `https://github.com/bedarkartejas-cyber/helix-images/blob/main/HP%20Laptop%2015/img1.jpg?raw=true`, 1, 1],
+    ['hp-laptop-15', 'image', `https://github.com/bedarkartejas-cyber/helix-images/blob/main/HP%20Laptop%2015/img2.jpg?raw=true`, 2, 0],
+    ['hp-laptop-15', 'image', `https://github.com/bedarkartejas-cyber/helix-images/blob/main/HP%20Laptop%2015/img3.jpg?raw=true`, 3, 0]
+  ];
+
+  onlineMedia.forEach(m => {
+    db.run(`INSERT INTO product_media (product_id, media_type, file_path, display_order, is_hero_media) VALUES (?, ?, ?, ?, ?)`, m);
+  });
+
+  persistToDisk(db);
+  console.log("Database reset and seeded successfully with YOUR GITHUB images.");
 }
 
 export interface Persona {
@@ -177,20 +397,11 @@ export interface Product {
   specs: ProductSpec[];
 }
 
-/**
- * Retrieves all products, optionally filtered by persona.
- * Aggregates related media and specs into nested arrays using JSON functions.
- * @param personaId - Optional ID of the persona to filter by.
- * @returns An array of fully-formed product objects.
- */
 export function getProducts(personaId?: string): Product[] {
   if (!dbInstance) {
     throw new Error("Database not initialized. Call setupDatabase first.");
   }
 
-  // This complex query joins products with personas and uses subqueries with JSON
-  // functions to aggregate related media and specs. This is highly efficient as
-  // it retrieves all data for all products in a single database roundtrip.
   let sql = `
     SELECT
       p.id,
@@ -248,8 +459,6 @@ export function getProducts(personaId?: string): Product[] {
   const products: Product[] = [];
   while (stmt.step()) {
     const row = stmt.getAsObject();
-    // The JSON columns are returned as strings, so we must parse them.
-    // We also handle cases where the subquery might return null (no related items).
     products.push({
       id: row.id as string,
       model_name: row.model_name as string,
@@ -265,11 +474,6 @@ export function getProducts(personaId?: string): Product[] {
   return products;
 }
 
-/**
- * Scores questionnaire answers to find the best persona and returns product recommendations.
- * @param answers - A record of question IDs and the user's selected answer value.
- * @returns An array of up to 3 recommended product objects.
- */
 export function getRecommendations(answers: Record<string, string>): Product[] {
   if (!dbInstance) {
     throw new Error("Database not initialized. Call setupDatabase first.");
@@ -282,12 +486,10 @@ export function getRecommendations(answers: Record<string, string>): Product[] {
     student: 0,
   };
 
-  // 1. Primary intent (strongest signal)
   if (answers.persona && Object.prototype.hasOwnProperty.call(scores, answers.persona)) {
     scores[answers.persona] += 10;
   }
 
-  // 2. Mobility preference
   if (answers.mobility === 'desktop') {
     scores.gaming += 2;
     scores.creator += 2;
@@ -296,7 +498,6 @@ export function getRecommendations(answers: Record<string, string>): Product[] {
     scores.student += 2;
   }
 
-  // 3. Workload intensity
   if (answers.workload === 'multitasking') {
     scores.gaming += 2;
     scores.creator += 2;
@@ -305,7 +506,6 @@ export function getRecommendations(answers: Record<string, string>): Product[] {
     scores.office += 1;
   }
 
-  // 4. Special features
   if (answers.feature === 'display') {
     scores.creator += 3;
   } else if (answers.feature === 'battery') {
@@ -315,7 +515,6 @@ export function getRecommendations(answers: Record<string, string>): Product[] {
     scores.office += 3;
   }
 
-  // Find the persona with the highest score
   let bestPersona; 
   let maxScore = -1;
   
@@ -326,9 +525,80 @@ export function getRecommendations(answers: Record<string, string>): Product[] {
     }
   }
 
-  console.log("Recommeded persona: ", bestPersona)
-  // Fetch all products for the winning persona and return up to 3
+  console.log("Recommended persona: ", bestPersona)
   const allMatchingProducts = getProducts(bestPersona);
-  console.log(allMatchingProducts)
   return allMatchingProducts.slice(0, 3);
+}
+
+// --- NEW FUNCTION: GET SINGLE PRODUCT BY ID ---
+export function getProductById(productId: string): Product | null {
+  if (!dbInstance) {
+    throw new Error("Database not initialized.");
+  }
+
+  const sql = `
+    SELECT
+      p.id,
+      p.model_name,
+      p.hero_description,
+      p.is_featured,
+      json_object(
+        'id', per.id,
+        'name', per.name,
+        'theme_color', per.theme_color,
+        'screensaver_path', per.screensaver_path
+      ) as persona,
+      (
+        SELECT json_group_array(
+          json_object(
+            'id', pm.id,
+            'media_type', pm.media_type,
+            'file_path', pm.file_path,
+            'display_order', pm.display_order,
+            'is_hero_media', pm.is_hero_media
+          )
+        )
+        FROM product_media pm
+        WHERE pm.product_id = p.id
+        ORDER BY pm.display_order
+      ) as media,
+      (
+        SELECT json_group_array(
+          json_object(
+            'id', ps.id,
+            'label', ps.label,
+            'human_value', ps.human_value,
+            'tech_value', ps.tech_value,
+            'icon_name', ps.icon_name
+          )
+        )
+        FROM product_specs ps
+        WHERE ps.product_id = p.id
+      ) as specs
+    FROM
+      products p
+    LEFT JOIN
+      personas per ON p.persona_id = per.id
+    WHERE p.id = ?
+  `;
+
+  const stmt = dbInstance.prepare(sql);
+  stmt.bind([productId]);
+
+  let product: Product | null = null;
+  if (stmt.step()) {
+    const row = stmt.getAsObject();
+    product = {
+      id: row.id as string,
+      model_name: row.model_name as string,
+      hero_description: row.hero_description as string,
+      is_featured: row.is_featured as number,
+      persona: row.persona ? JSON.parse(row.persona as string) : null,
+      media: row.media ? JSON.parse(row.media as string) : [],
+      specs: row.specs ? JSON.parse(row.specs as string) : [],
+    };
+  }
+
+  stmt.free();
+  return product;
 }

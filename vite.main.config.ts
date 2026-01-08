@@ -1,12 +1,15 @@
 import { defineConfig } from 'vite';
 
-// https://vitejs.dev/config
 export default defineConfig({
-    build: {
+  build: {
     rollupOptions: {
-      // This tells Vite NOT to bundle the sqlite binary
-      external: ['sql.js'],
+      // Add 'sql.js' back here to fix the crash
+      external: ['sqlite3', 'sql.js'], 
     },
-    
+  },
+  resolve: {
+    alias: {
+      'sql.js': 'sql.js',
+    },
   },
 });

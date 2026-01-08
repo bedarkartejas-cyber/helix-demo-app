@@ -37,6 +37,10 @@ export interface Product {
 
 export interface IElectronAPI {
   getProducts: (personaId?: string) => Promise<Product[]>;
+  getRecommendations: (answers: Record<string, string>) => Promise<Product[]>;
+  
+  // --- NEW FUNCTION DEFINITION ---
+  getProductById: (id: string) => Promise<Product | null>;
 }
 
 declare global {

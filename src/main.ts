@@ -1,91 +1,96 @@
-import path from 'node:path';
-import { app, BrowserWindow, ipcMain, screen } from 'electron';
-import started from 'electron-squirrel-startup';
-import { getProducts, getRecommendations, seedDatabase, setupDatabase } from './database/model';
+import { app, BrowserWindow, ipcMain } from 'electron';
+import path from 'path';
+import { 
+  setupDatabase, 
+  seedDatabase, 
+  getProducts, 
+  getRecommendations, 
+  getProductById 
+} from './database/model';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
-if (started) {
+if (require('electron-squirrel-startup')) {
   app.quit();
 }
 
+// --- FIX: Declare Vite constants so TypeScript doesn't complain ---
+declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string;
+declare const MAIN_WINDOW_VITE_NAME: string;
+
 const createWindow = () => {
   // Create the browser window.
-  // Get the primary display's work area size for dynamic window dimensions
-  const primaryDisplay = screen.getPrimaryDisplay();
-  const { width, height } = primaryDisplay.workAreaSize;
-  console.log(`Creating window with dynamic dimensions: ${width}x${height}`);
   const mainWindow = new BrowserWindow({
-    width: width,
-    height: height,
+    width: 1280,
+    height: 800,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
     },
   });
 
-  // and load the app.tsx of the app.
+  // --- FIX: Use Vite variables instead of Webpack ---
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
     mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);
   } else {
-    mainWindow.loadFile(
-      path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`),
-    );
+    mainWindow.loadFile(path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`));
   }
 
   // Open the DevTools.
-  mainWindow.webContents.openDevTools();
+  // mainWindow.webContents.openDevTools();
 };
 
-// This method will be called when Electron has finished
-// initialization and is ready to create browser windows.
-// Some APIs can only be used after this event occurs.
-// app.on('ready', createWindow);
 app.whenReady().then(async () => {
+  // 1. Initialize Database
   try {
-    const db = await setupDatabase(); // Get the database instance from setupDatabase
-    seedDatabase(db); // Pass the database instance to seedDatabase
-
-    // Expose the getProducts function to the renderer process via IPC.
-    ipcMain.handle('get-products', (_event, personaId?: string) => {
-      try {
-        return getProducts(personaId);
-      } catch (error) {
-        console.error('Failed to get products:', error);
-        return []; // Return an empty array on error to prevent renderer crash.
-      }
-    });
-
-    ipcMain.handle('get-recommendations', (_event, answers: Record<string, string>) => {
-      try {
-        console.log('Received answers for recommendation:', answers);
-        return getRecommendations(answers);
-      } catch (error) {
-        console.error('Failed to get recommendations:', error);
-        return [];
-      }
-    });
-
-    createWindow();
-  } catch (error) {
-    console.error('Failed to initialize application:', error);
+    const db = await setupDatabase();
+    console.log("Database initialized.");
+    
+    // Seed it (This runs your 'Clear Old Data' logic)
+    seedDatabase(db);
+    console.log("Database seeded.");
+  } catch (err) {
+    console.error("Failed to setup database:", err);
   }
+
+  // 2. Register API Handlers
+  ipcMain.handle('get-products', (_event, personaId?: string) => {
+    try {
+      return getProducts(personaId);
+    } catch (error) {
+      console.error('Failed to get products:', error);
+      return [];
+    }
+  });
+
+  ipcMain.handle('get-recommendations', (_event, answers: Record<string, string>) => {
+    try {
+      return getRecommendations(answers);
+    } catch (error) {
+      console.error('Failed to get recommendations:', error);
+      return [];
+    }
+  });
+
+  // --- HANDLER FOR PRODUCT DETAIL ---
+  ipcMain.handle('get-product-by-id', (_event, productId: string) => {
+    try {
+      return getProductById(productId);
+    } catch (error) {
+      console.error('Failed to get product detail:', error);
+      return null;
+    }
+  });
+
+  createWindow();
+
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createWindow();
+    }
+  });
 });
 
-// Quit when all windows are closed, except on macOS. There, it's common
-// for applications and their menu bar to stay active until the user quits
-// explicitly with Cmd + Q.
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit();
   }
 });
-
-app.on('activate', () => {
-  // On OS X it's common to re-create a window in the app when the
-  // dock icon is clicked and there are no other windows open.
-  if (BrowserWindow.getAllWindows().length === 0) {
-    createWindow();
-  }
-});
-
-// In this file you can include the rest of your app's specific main process
-// code. You can also put them in separate files and import them here.

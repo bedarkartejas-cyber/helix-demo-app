@@ -97,18 +97,18 @@ export default function Questionnaire() {
     const currentQuestion = questions[currentQuestionIndex];
 
     return (
-        <div className="h-screen w-screen bg-black text-white flex flex-col items-center justify-center p-10 overflow-y-auto">
+        <div className="h-screen w-screen bg-black text-white flex flex-col items-center justify-center p-10 overflow-y-auto font-sans">
             <header className="absolute top-10 left-10">
                 <Link
                     to="/"
-                    className="text-zinc-400 hover:text-white transition-colors"
+                    className="text-zinc-400 hover:text-white transition-colors flex items-center gap-2"
                 >
                     &larr; Back to Home
                 </Link>
             </header>
 
             {isQuizFinished ? (
-                <div className="text-center w-full max-w-5xl">
+                <div className="text-center w-full max-w-5xl animate-in fade-in zoom-in duration-500">
                     {isLoading ? (
                         <>
                             <h1 className="text-5xl font-light mb-4 animate-pulse">
@@ -132,52 +132,76 @@ export default function Questionnaire() {
                                 {recommendations.map((product) => (
                                     <div
                                         key={product.id}
-                                        className="group border border-zinc-800 rounded-3xl p-6 bg-zinc-950 text-left flex flex-col"
+                                        className="group border border-zinc-800 rounded-3xl p-6 bg-zinc-950 text-left flex flex-col hover:border-zinc-700 transition-all hover:shadow-2xl hover:shadow-zinc-900"
                                     >
-                                        <div className="aspect-video bg-zinc-900 rounded-2xl mb-6 overflow-hidden">
-                                            <div className="w-full h-full flex items-center justify-center text-zinc-500">
-                                                {product.model_name} Visual
-                                            </div>
+                                        <div className="aspect-video bg-zinc-900 rounded-2xl mb-6 overflow-hidden relative">
+                                            {product.media && product.media.length > 0 ? (
+                                                <img 
+                                                    src={product.media[0].file_path} 
+                                                    alt={product.model_name}
+                                                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                                                />
+                                            ) : (
+                                                <div className="w-full h-full flex items-center justify-center text-zinc-600 font-medium">
+                                                    {product.model_name} Visual
+                                                </div>
+                                            )}
                                         </div>
-                                        <h3 className="text-xl font-bold text-white">
+                                        <h3 className="text-xl font-bold text-white tracking-tight">
                                             {product.model_name}
                                         </h3>
-                                        <p className="text-zinc-400 mt-2 leading-relaxed flex-grow">
+                                        <p className="text-zinc-400 mt-3 leading-relaxed flex-grow text-sm">
                                             {product.hero_description}
                                         </p>
-                                        <button className="mt-8 w-full py-3 bg-zinc-800 text-white rounded-xl font-bold group-hover:bg-helix-student transition-colors">
-                                            Explore
-                                        </button>
+                                        
+                                        <div className="mt-8">
+                                            {/* --- UPDATED BUTTON WITH LINK --- */}
+                                            <Link to={`/product/${product.id}`} className="block w-full">
+                                                <button className="w-full py-3 bg-zinc-800 text-white rounded-xl font-bold group-hover:bg-blue-600 transition-all hover:scale-[1.02]">
+                                                    Explore
+                                                </button>
+                                            </Link>
+                                        </div>
                                     </div>
                                 ))}
                             </div>
                         </>
                     )}
-                    <div className="bg-zinc-900 p-6 rounded-lg text-left max-w-md mx-auto mt-16">
-                        <h2 className="text-lg font-bold mb-4 text-white">
-                            Your Selections Summary
-                        </h2>
-                        <ul className="space-y-2">
-                            {Object.entries(answers).map(([key, value]) => (
-                                <li key={key} className="flex justify-between">
-                                    <span className="capitalize text-zinc-400">
-                                        {key}:
-                                    </span>
-                                    <span className="font-mono text-helix-student">
-                                        {value}
-                                    </span>
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
+                    
+                    {!isLoading && (
+                        <div className="bg-zinc-900/50 border border-zinc-800 p-6 rounded-2xl text-left max-w-md mx-auto mt-16 backdrop-blur-sm">
+                            <h2 className="text-sm font-bold mb-4 text-zinc-300 uppercase tracking-wider">
+                                Your Selections
+                            </h2>
+                            <ul className="space-y-3">
+                                {Object.entries(answers).map(([key, value]) => (
+                                    <li key={key} className="flex justify-between items-center text-sm">
+                                        <span className="capitalize text-zinc-500">
+                                            {key}
+                                        </span>
+                                        <span className="font-mono text-blue-400 bg-blue-900/20 px-2 py-1 rounded">
+                                            {value}
+                                        </span>
+                                    </li>
+                                ))}
+                            </ul>
+                            <div className="mt-6 pt-6 border-t border-zinc-800 text-center">
+                                <button 
+                                    onClick={() => window.location.reload()}
+                                    className="text-zinc-500 hover:text-white text-sm transition-colors"
+                                >
+                                    Start Over
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
             ) : (
                 <div className="w-full max-w-3xl text-center">
-                    <p className="text-helix-student font-bold uppercase tracking-widest text-sm mb-4">
-                        Question {currentQuestionIndex + 1} of{" "}
-                        {questions.length}
+                    <p className="text-blue-500 font-bold uppercase tracking-widest text-xs mb-6">
+                        Question {currentQuestionIndex + 1} / {questions.length}
                     </p>
-                    <h1 className="text-4xl md:text-5xl font-light leading-tight mb-12">
+                    <h1 className="text-4xl md:text-5xl font-light leading-tight mb-12 animate-in slide-in-from-bottom-4 duration-500">
                         {currentQuestion.question}
                     </h1>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -190,9 +214,9 @@ export default function Questionnaire() {
                                         option.value
                                     )
                                 }
-                                className="p-8 border border-zinc-800 rounded-2xl text-left hover:bg-zinc-900 hover:border-zinc-700 transition-all"
+                                className="p-8 border border-zinc-800 rounded-3xl text-left hover:bg-zinc-900 hover:border-zinc-600 transition-all hover:scale-[1.02] active:scale-95 duration-200"
                             >
-                                <span className="text-lg">{option.text}</span>
+                                <span className="text-lg font-light">{option.text}</span>
                             </button>
                         ))}
                     </div>
