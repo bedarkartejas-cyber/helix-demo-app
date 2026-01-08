@@ -1,6 +1,7 @@
 import React from "react";
 import { HashRouter, Routes, Route, Link } from "react-router-dom";
 import ProductCatalog from "./catalog";
+import Questionnaire from "./Questionnaire";
 
 function HomePage() {
     return (
@@ -24,17 +25,19 @@ function HomePage() {
             <div className="w-1/2 h-full flex flex-col">
                 {/* SECTION 2: AI-Lite Recommendation (Top Right 25%) */}
                 {/* Implements the "Guided, needs-based questionnaire" [cite: 17] */}
-                <section className="h-1/2 p-10 flex flex-col justify-center border-b border-zinc-800 bg-zinc-950 hover:bg-zinc-900 transition-colors cursor-pointer group">
-                    <span className="text-helix-student font-bold uppercase tracking-widest text-xs mb-2">
-                        AI-Lite Match
-                    </span>
-                    <h3 className="text-4xl font-light leading-tight">
-                        Find your <br /> perfect laptop.
-                    </h3>
-                    <p className="text-zinc-500 mt-4 group-hover:text-white transition-colors">
-                        Start the 30-second quiz &rarr;
-                    </p>
-                </section>
+                <Link to="/quiz" className="h-1/2">
+                    <section className="h-full p-10 flex flex-col justify-center border-b border-zinc-800 bg-zinc-950 hover:bg-zinc-900 transition-colors cursor-pointer group">
+                        <span className="text-helix-student font-bold uppercase tracking-widest text-xs mb-2">
+                            AI-Lite Match
+                        </span>
+                        <h3 className="text-4xl font-light leading-tight">
+                            Find your <br /> perfect laptop.
+                        </h3>
+                        <p className="text-zinc-500 mt-4 group-hover:text-white transition-colors">
+                            Start the 30-second quiz &rarr;
+                        </p>
+                    </section>
+                </Link>
 
                 {/* SECTION 3: Product Catalog (Bottom Right 25%) */}
                 {/* Implements the "Family-based product listing" [cite: 19] */}
@@ -72,6 +75,7 @@ export default function App() {
             <Routes>
                 <Route path="/" element={<HomePage />} />
                 <Route path="/catalog" element={<ProductCatalog />} />
+                <Route path="/quiz" element={<Questionnaire />} />
             </Routes>
         </HashRouter>
     );
