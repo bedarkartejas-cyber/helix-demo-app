@@ -22,9 +22,9 @@ export default function ProductCatalog() {
     }, [activePersona]); // Re-fetch when activePersona changes
 
     return (
-        <div className="flex h-screen bg-white text-slate-900">
+        <div className="flex h-screen w-screen bg-white text-slate-900">
             {/* Sidebar: Persona Filters [cite: 14, 19] */}
-            <aside className="w-72 border-r p-8 space-y-4 flex flex-col">
+            <aside className="w-72 border-r px-6 py-10 space-y-4 flex flex-col overflow-y-auto">
                 <Link
                     to="/"
                     className="text-sm text-slate-500 mb-4 hover:text-slate-900"
@@ -77,7 +77,7 @@ export default function ProductCatalog() {
                                 {product.model_name}
                             </h3>
                             {/* The "Human Term" pitch  */}
-                            <p className="text-slate-600 mt-2 leading-relaxed">
+                            <p className="text-slate-600 mt-2 leading-relaxed min-h-10 h-14 overflow-hidden">
                                 {product.hero_description}
                             </p>
                             <button className="mt-8 w-full py-4 bg-slate-900 text-white rounded-2xl font-bold group-hover:bg-blue-600 transition-colors">
