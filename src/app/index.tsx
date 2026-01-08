@@ -1,6 +1,8 @@
-import "react";
+import React from "react";
+import { HashRouter, Routes, Route, Link } from "react-router-dom";
+import ProductCatalog from "./catalog";
 
-export default function App() {
+function HomePage() {
     return (
         <div className="h-screen w-screen bg-black text-white flex overflow-hidden">
             {/* SECTION 1: Audio AI (Left 50%) */}
@@ -36,25 +38,41 @@ export default function App() {
 
                 {/* SECTION 3: Product Catalog (Bottom Right 25%) */}
                 {/* Implements the "Family-based product listing" [cite: 19] */}
-                <section className="h-1/2 p-10 flex flex-col justify-center bg-black hover:bg-zinc-950 transition-colors cursor-pointer group">
-                    <span className="text-helix-gaming font-bold uppercase tracking-widest text-xs mb-2">
-                        Explore All
-                    </span>
-                    <h3 className="text-4xl font-light leading-tight">
-                        Browse the <br /> full catalogue.
-                    </h3>
-                    <div className="mt-6 flex gap-2">
-                        {["Gaming", "Creator", "Office", "Student"].map((p) => (
-                            <span
-                                key={p}
-                                className="px-3 py-1 bg-zinc-800 text-xs rounded-full"
-                            >
-                                {p}
-                            </span>
-                        ))}
-                    </div>
-                </section>
+                {/* The section is now wrapped in a Link component for navigation */}
+                <Link to="/catalog" className="h-1/2">
+                    <section className="h-full p-10 flex flex-col justify-center bg-black hover:bg-zinc-950 transition-colors cursor-pointer group">
+                        <span className="text-helix-gaming font-bold uppercase tracking-widest text-xs mb-2">
+                            Explore All
+                        </span>
+                        <h3 className="text-4xl font-light leading-tight">
+                            Browse the <br /> full catalogue.
+                        </h3>
+                        <div className="mt-6 flex gap-2">
+                            {["Gaming", "Creator", "Office", "Student"].map(
+                                (p) => (
+                                    <span
+                                        key={p}
+                                        className="px-3 py-1 bg-zinc-800 text-xs rounded-full"
+                                    >
+                                        {p}
+                                    </span>
+                                )
+                            )}
+                        </div>
+                    </section>
+                </Link>
             </div>
         </div>
+    );
+}
+
+export default function App() {
+    return (
+        <HashRouter>
+            <Routes>
+                <Route path="/" element={<HomePage />} />
+                <Route path="/catalog" element={<ProductCatalog />} />
+            </Routes>
+        </HashRouter>
     );
 }

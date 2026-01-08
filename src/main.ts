@@ -1,7 +1,7 @@
 import path from 'node:path';
-import { app, BrowserWindow, screen } from 'electron';
+import { app, BrowserWindow, ipcMain, screen } from 'electron';
 import started from 'electron-squirrel-startup';
-import { seedDatabase, setupDatabase } from './database/model';
+import { getProducts, seedDatabase, setupDatabase } from './database/model';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -13,6 +13,7 @@ const createWindow = () => {
   // Get the primary display's work area size for dynamic window dimensions
   const primaryDisplay = screen.getPrimaryDisplay();
   const { width, height } = primaryDisplay.workAreaSize;
+  console.log(`Creating window with dynamic dimensions: ${width}x${height}`);
   const mainWindow = new BrowserWindow({
     width: width,
     height: height,
@@ -42,6 +43,17 @@ app.whenReady().then(async () => {
   try {
     const db = await setupDatabase(); // Get the database instance from setupDatabase
     seedDatabase(db); // Pass the database instance to seedDatabase
+
+    // Expose the getProducts function to the renderer process via IPC.
+    ipcMain.handle('get-products', (_event, personaId?: string) => {
+      try {
+        return getProducts(personaId);
+      } catch (error) {
+        console.error('Failed to get products:', error);
+        return []; // Return an empty array on error to prevent renderer crash.
+      }
+    });
+
     createWindow();
   } catch (error) {
     console.error('Failed to initialize application:', error);

@@ -127,3 +127,124 @@ export function seedDatabase(db: initSqlJs.Database) { // Accept the database in
   persistToDisk(db); // Pass the db argument to persistToDisk
   console.log("Database seeded successfully via sql.js");
 }
+
+export interface Persona {
+  id: string;
+  name: string;
+  theme_color: string;
+  screensaver_path: string;
+}
+
+export interface ProductSpec {
+  id: number;
+  label: string;
+  human_value: string;
+  tech_value: string | null;
+  icon_name: string;
+}
+
+export interface ProductMedia {
+  id: number;
+  media_type: string;
+  file_path: string;
+  display_order: number;
+  is_hero_media: number;
+}
+
+export interface Product {
+  id: string;
+  model_name: string;
+  hero_description: string;
+  is_featured: number;
+  persona: Persona | null;
+  media: ProductMedia[];
+  specs: ProductSpec[];
+}
+
+/**
+ * Retrieves all products, optionally filtered by persona.
+ * Aggregates related media and specs into nested arrays using JSON functions.
+ * @param personaId - Optional ID of the persona to filter by.
+ * @returns An array of fully-formed product objects.
+ */
+export function getProducts(personaId?: string): Product[] {
+  if (!dbInstance) {
+    throw new Error("Database not initialized. Call setupDatabase first.");
+  }
+
+  // This complex query joins products with personas and uses subqueries with JSON
+  // functions to aggregate related media and specs. This is highly efficient as
+  // it retrieves all data for all products in a single database roundtrip.
+  let sql = `
+    SELECT
+      p.id,
+      p.model_name,
+      p.hero_description,
+      p.is_featured,
+      json_object(
+        'id', per.id,
+        'name', per.name,
+        'theme_color', per.theme_color,
+        'screensaver_path', per.screensaver_path
+      ) as persona,
+      (
+        SELECT json_group_array(
+          json_object(
+            'id', pm.id,
+            'media_type', pm.media_type,
+            'file_path', pm.file_path,
+            'display_order', pm.display_order,
+            'is_hero_media', pm.is_hero_media
+          )
+        )
+        FROM product_media pm
+        WHERE pm.product_id = p.id
+        ORDER BY pm.display_order
+      ) as media,
+      (
+        SELECT json_group_array(
+          json_object(
+            'id', ps.id,
+            'label', ps.label,
+            'human_value', ps.human_value,
+            'tech_value', ps.tech_value,
+            'icon_name', ps.icon_name
+          )
+        )
+        FROM product_specs ps
+        WHERE ps.product_id = p.id
+      ) as specs
+    FROM
+      products p
+    LEFT JOIN
+      personas per ON p.persona_id = per.id
+  `;
+
+  if (personaId) {
+    sql += ' WHERE p.persona_id = ?';
+  }
+
+  const stmt = dbInstance.prepare(sql);
+  if (personaId) {
+    stmt.bind([personaId]);
+  }
+
+  const products: Product[] = [];
+  while (stmt.step()) {
+    const row = stmt.getAsObject();
+    // The JSON columns are returned as strings, so we must parse them.
+    // We also handle cases where the subquery might return null (no related items).
+    products.push({
+      id: row.id as string,
+      model_name: row.model_name as string,
+      hero_description: row.hero_description as string,
+      is_featured: row.is_featured as number,
+      persona: row.persona ? JSON.parse(row.persona as string) : null,
+      media: row.media ? JSON.parse(row.media as string) : [],
+      specs: row.specs ? JSON.parse(row.specs as string) : [],
+    });
+  }
+
+  stmt.free();
+  return products;
+}
