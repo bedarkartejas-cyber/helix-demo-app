@@ -101,10 +101,22 @@ export function seedDatabase(db: initSqlJs.Database) { // Accept the database in
 
   // Insert Products [cite: 14]
   const allProducts = [
+    // Gaming
     ['omen-17', 'OMEN 17', 'gaming', 'Desktop-class power in a portable form factor.'],
+    ['omen-16', 'OMEN 16', 'gaming', 'The perfectly balanced engine for competitive play.'],
+    ['victus-16', 'Victus 16', 'gaming', 'Serious gaming performance at an accessible value.'],
+    // Creator
     ['spectre-16', 'Spectre x360 16', 'creator', 'A 16-inch canvas for your biggest creative ideas.'],
+    ['envy-16', 'Envy 16', 'creator', 'Power and precision for editing 4K video on the go.'],
+    ['pavilion-plus-14-oled', 'Pavilion Plus 14 OLED', 'creator', 'Compact creator power with a stunning OLED display.'],
+    // Office
     ['elitebook-840', 'EliteBook 840 G10', 'office', 'The corporate standard for security and performance.'],
-    ['pavilion-14-std', 'Pavilion Plus 14', 'student', 'The all-day companion for lectures and late-night study.']
+    ['probook-450', 'ProBook 450 G10', 'office', 'Essential business power for the modern professional.'],
+    ['elite-x360', 'Elite x360 830', 'office', 'Premium flexibility for executive leaders.'],
+    // Student
+    ['pavilion-14-std', 'Pavilion Plus 14', 'student', 'The all-day companion for lectures and late-night study.'],
+    ['pavilion-x360', 'Pavilion x360 14', 'student', 'The versatile laptop for taking notes and streaming movies.'],
+    ['hp-laptop-15', 'HP Laptop 15', 'student', 'Affordable, reliable, and ready for every assignment.']
   ];
 
   allProducts.forEach(p => {
@@ -114,9 +126,13 @@ export function seedDatabase(db: initSqlJs.Database) { // Accept the database in
   // Insert Human-Centric Specs [cite: 4, 20]
   const allSpecs = [
     ['omen-17', 'Performance', 'Crush AAA titles with pro-level frame rates.', 'GiRocket'],
+    ['omen-17', 'Cooling', 'Omen Tempest Cooling stays quiet during long raids.', 'FiWind'],
     ['spectre-16', 'Display', 'Vibrant OLED touch screen with pro-grade color accuracy.', 'FiEdit'],
+    ['spectre-16', 'Flexibility', 'Flips 360 degrees to go from laptop to creative tablet.', 'FiRefreshCw'],
     ['elitebook-840', 'Collaboration', 'AI-enhanced video and audio for crystal-clear calls.', 'FiUsers'],
-    ['pavilion-14-std', 'Battery', 'Lasts through your longest school day on one charge.', 'FiBattery']
+    ['elitebook-840', 'Security', 'Hardware-level protection to keep your data safe.', 'FiLock'],
+    ['pavilion-14-std', 'Battery', 'Lasts through your longest school day on one charge.', 'FiBattery'],
+    ['pavilion-14-std', 'Sustainability', 'Built with recycled materials for a greener future.', 'FiGlobe']
   ];
 
   allSpecs.forEach(s => {
@@ -247,4 +263,72 @@ export function getProducts(personaId?: string): Product[] {
 
   stmt.free();
   return products;
+}
+
+/**
+ * Scores questionnaire answers to find the best persona and returns product recommendations.
+ * @param answers - A record of question IDs and the user's selected answer value.
+ * @returns An array of up to 3 recommended product objects.
+ */
+export function getRecommendations(answers: Record<string, string>): Product[] {
+  if (!dbInstance) {
+    throw new Error("Database not initialized. Call setupDatabase first.");
+  }
+
+  const scores: Record<string, number> = {
+    gaming: 0,
+    creator: 0,
+    office: 0,
+    student: 0,
+  };
+
+  // 1. Primary intent (strongest signal)
+  if (answers.persona && Object.prototype.hasOwnProperty.call(scores, answers.persona)) {
+    scores[answers.persona] += 10;
+  }
+
+  // 2. Mobility preference
+  if (answers.mobility === 'desktop') {
+    scores.gaming += 2;
+    scores.creator += 2;
+  } else if (answers.mobility === 'portable') {
+    scores.office += 2;
+    scores.student += 2;
+  }
+
+  // 3. Workload intensity
+  if (answers.workload === 'multitasking') {
+    scores.gaming += 2;
+    scores.creator += 2;
+  } else if (answers.workload === 'essentials') {
+    scores.student += 2;
+    scores.office += 1;
+  }
+
+  // 4. Special features
+  if (answers.feature === 'display') {
+    scores.creator += 3;
+  } else if (answers.feature === 'battery') {
+    scores.student += 2;
+    scores.office += 2;
+  } else if (answers.feature === 'security') {
+    scores.office += 3;
+  }
+
+  // Find the persona with the highest score
+  let bestPersona; 
+  let maxScore = -1;
+  
+  for (const persona in scores) {
+    if (scores[persona] > maxScore) {
+      maxScore = scores[persona];
+      bestPersona = persona;
+    }
+  }
+
+  console.log("Recommeded persona: ", bestPersona)
+  // Fetch all products for the winning persona and return up to 3
+  const allMatchingProducts = getProducts(bestPersona);
+  console.log(allMatchingProducts)
+  return allMatchingProducts.slice(0, 3);
 }

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import type { Product } from "../interfaces";
+import { Product } from "../interfaces";
 
 export default function ProductCatalog() {
     const [products, setProducts] = useState<Product[]>([]);

@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { app, BrowserWindow, ipcMain, screen } from 'electron';
 import started from 'electron-squirrel-startup';
-import { getProducts, seedDatabase, setupDatabase } from './database/model';
+import { getProducts, getRecommendations, seedDatabase, setupDatabase } from './database/model';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -22,7 +22,7 @@ const createWindow = () => {
     },
   });
 
-  // and load the index.html of the app.
+  // and load the app.tsx of the app.
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
     mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);
   } else {
@@ -51,6 +51,16 @@ app.whenReady().then(async () => {
       } catch (error) {
         console.error('Failed to get products:', error);
         return []; // Return an empty array on error to prevent renderer crash.
+      }
+    });
+
+    ipcMain.handle('get-recommendations', (_event, answers: Record<string, string>) => {
+      try {
+        console.log('Received answers for recommendation:', answers);
+        return getRecommendations(answers);
+      } catch (error) {
+        console.error('Failed to get recommendations:', error);
+        return [];
       }
     });
 
