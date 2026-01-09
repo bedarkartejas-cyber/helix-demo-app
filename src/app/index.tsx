@@ -3,6 +3,7 @@ import { HashRouter, Routes, Route, Link } from "react-router-dom";
 import ProductCatalog from "./catalog";
 import Questionnaire from "./Questionnaire";
 import ProductDetail from "./ProductDetail"; // <--- Import the new page
+import Screensaver from "./screensaver";
 
 function HomePage() {
     return (
@@ -69,11 +70,12 @@ function HomePage() {
 export default function App() {
     return (
         <HashRouter>
+            <Screensaver />
             <Routes>
                 <Route path="/" element={<HomePage />} />
                 <Route path="/catalog" element={<ProductCatalog />} />
                 <Route path="/quiz" element={<Questionnaire />} />
-                
+
                 {/* --- NEW ROUTE ADDED HERE --- */}
                 <Route path="/product/:id" element={<ProductDetail />} />
             </Routes>
