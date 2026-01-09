@@ -1,14 +1,15 @@
-import initSqlJs from 'sql.js';
+import type initSqlJs from 'sql.js';
 import path from 'path';
 import fs from 'fs';
 import { app } from 'electron';
+import type { Database } from 'sql.js';
 
 // 1. Path determination
 const dbPath = app.isPackaged 
   ? path.join(app.getPath('userData'), 'v5_retail.db') 
   : 'v5_retail.db';
 
-let dbInstance: initSqlJs.Database;
+let dbInstance: Database;
 
 /**
  * Saves the in-memory database back to the physical disk.
@@ -21,21 +22,37 @@ function persistToDisk(db: initSqlJs.Database) {
 
 export async function setupDatabase() {
   // Load the WASM engine
-  let SQL;
-  
-  if (app.isPackaged) {
-    // In Production (EXE): Load from the resources folder we configured
-    const initSqlJs = require(path.join(process.resourcesPath, 'sql-wasm.js'));
-    SQL = await initSqlJs({
-      locateFile: (file: string) => path.join(process.resourcesPath, file)
-    });
-  } else {
-    // In Development: Load from node_modules normally
-    const initSqlJs = require('sql.js');
-    SQL = await initSqlJs({
-       locateFile: (file: string) => path.join(__dirname, '../../node_modules/sql.js/dist', file)
-    });
-  }
+  console.log('Setting up database...');
+  console.log('App is packaged:', app.isPackaged);
+  console.log('Process resourcesPath:', process.resourcesPath);
+  console.log('__dirname:', __dirname);
+
+  // Dynamic import for sql.js
+  const initSqlJsModule = await import('sql.js');
+  const initSqlJsFn: typeof initSqlJs = initSqlJsModule.default;
+
+  const SQL = await initSqlJsFn({
+    locateFile: (file: string) => {
+      let wasmPath: string;
+      
+      if (app.isPackaged) {
+        // In production: WASM is in process.resourcesPath
+        wasmPath = path.join(process.resourcesPath, file);
+      } else {
+        // In development: __dirname is .vite/build, WASM is in .vite/build/sql-wasm.wasm
+        wasmPath = path.join(__dirname, file);
+      }
+      
+      console.log('Looking for WASM file at:', wasmPath);
+      console.log('WASM file exists:', fs.existsSync(wasmPath));
+      
+      if (!fs.existsSync(wasmPath)) {
+        throw new Error(`WASM file not found at: ${wasmPath}`);
+      }
+      
+      return wasmPath;
+    }
+  });
 
   // Load existing data if it exists, otherwise create new
   if (fs.existsSync(dbPath)) {
