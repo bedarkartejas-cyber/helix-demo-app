@@ -1,96 +1,28 @@
-import type initSqlJs from 'sql.js';
-import path from 'path';
-import fs from 'fs';
-import { app } from 'electron';
-import type { Database } from 'sql.js';
+const initSqlJs = require('sql.js');
+const fs = require('fs');
+const path = require('path');
 
-// 1. Path determination
-const dbPath = app.isPackaged 
-  ? path.join(app.getPath('userData'), 'v5_retail.db') 
-  : 'v5_retail.db';
-
-// Path to bundled seed database
-const seedDbPath = app.isPackaged
-  ? path.join(process.resourcesPath, 'seed.db')
-  : path.join(__dirname, '../../resources/seed.db');
-
-let dbInstance: Database;
-
-/**
- * Saves the in-memory database back to the physical disk.
- */
-function persistToDisk(db: initSqlJs.Database) {
-  const data = db.export();
-  const buffer = Buffer.from(data);
-  fs.writeFileSync(dbPath, buffer);
-}
-
-export async function setupDatabase() {
-  // Load the WASM engine
-  console.log('Setting up database...');
-  console.log('App is packaged:', app.isPackaged);
-  console.log('User Database Path:', dbPath);
-  console.log('Seed Database Path:', seedDbPath);
-  // console.log('__dirname:', __dirname);
-
-  // Dynamic import for sql.js
-  const initSqlJsModule = await import('sql.js');
-  const initSqlJsFn: typeof initSqlJs = initSqlJsModule.default;
-
-  const SQL = await initSqlJsFn({
-    locateFile: (file: string) => {
-      let wasmPath: string;
-      
-      if (app.isPackaged) {
-        // In production: WASM is in process.resourcesPath
-        wasmPath = path.join(process.resourcesPath, file);
-      } else {
-        // In development: __dirname is .vite/build, WASM is in .vite/build/sql-wasm.wasm
-        wasmPath = path.join(__dirname, file);
-      }
-      
-      console.log('Looking for WASM file at:', wasmPath);
-      console.log('WASM file exists:', fs.existsSync(wasmPath));
-      
-      if (!fs.existsSync(wasmPath)) {
-        throw new Error(`WASM file not found at: ${wasmPath}`);
-      }
-      
-      return wasmPath;
-    }
+async function createSeedDatabase() {
+  console.log('Creating seed database...');
+  
+  // Initialize SQL.js
+  const SQL = await initSqlJs({
+    locateFile: file => path.join(__dirname, '../node_modules/sql.js/dist', file)
   });
 
-  if (!fs.existsSync(dbPath)) {
-    console.log('User database does not exist. Checking for seed database...');
-    
-    // Try to copy seed database
-    if (fs.existsSync(seedDbPath)) {
-      console.log('Seed database found! Copying to user data...');
-      fs.copyFileSync(seedDbPath, dbPath);
-      console.log('✓ Seed database copied successfully!');
-    } else {
-      console.log('No seed database found. Creating empty database.');
-    }
-  }
-  
-  // Load existing data if it exists, otherwise create new
-  if (fs.existsSync(dbPath)) {
-    const fileBuffer = fs.readFileSync(dbPath);
-    dbInstance = new SQL.Database(fileBuffer);
-  } else {
-    dbInstance = new SQL.Database();
-  }
+  // Create new database
+  const db = new SQL.Database();
 
   // Create tables
-  dbInstance.run(`
-    CREATE TABLE IF NOT EXISTS personas ( 
+  db.run(`
+    CREATE TABLE personas ( 
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
         screensaver_path TEXT,
         theme_color TEXT
     );
 
-    CREATE TABLE IF NOT EXISTS products (
+    CREATE TABLE products (
         id TEXT PRIMARY KEY,
         model_name TEXT NOT NULL,
         persona_id TEXT,
@@ -99,7 +31,7 @@ export async function setupDatabase() {
         FOREIGN KEY (persona_id) REFERENCES personas(id)
     );
 
-    CREATE TABLE IF NOT EXISTS product_media (
+    CREATE TABLE product_media (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         product_id TEXT,
         media_type TEXT,
@@ -109,7 +41,7 @@ export async function setupDatabase() {
         FOREIGN KEY (product_id) REFERENCES products(id)
     );
 
-    CREATE TABLE IF NOT EXISTS product_specs (
+    CREATE TABLE product_specs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         product_id TEXT,
         label TEXT,
@@ -120,22 +52,10 @@ export async function setupDatabase() {
     );
   `);
 
-  persistToDisk(dbInstance);
-  console.log(`sql.js initialized at: ${dbPath}`);
-  return dbInstance;
-}
-
-export function seedDatabase(db: initSqlJs.Database) {
   db.run('PRAGMA foreign_keys = ON');
 
-  // --- STEP 1: CLEAR OLD DATA ---
-  console.log("Clearing old data to prevent duplicates...");
-  db.run('DELETE FROM product_specs');
-  db.run('DELETE FROM product_media');
-  db.run('DELETE FROM products');
-  db.run('DELETE FROM personas');
-
-  // --- STEP 2: INSERT PERSONAS ---
+  // Insert personas
+  console.log('Inserting personas...');
   const personas = [
     ['gaming', 'Gaming', 'media/screensavers/gaming_helix.mp4', '#FF4500'],
     ['creator', 'Creator', 'media/screensavers/creator_helix.mp4', '#9333EA'],
@@ -145,8 +65,10 @@ export function seedDatabase(db: initSqlJs.Database) {
   personas.forEach(p => {
     db.run(`INSERT INTO personas (id, name, screensaver_path, theme_color) VALUES (?, ?, ?, ?)`, p);
   });
+  console.log(`✓ Inserted ${personas.length} personas`);
 
-  // --- STEP 3: INSERT PRODUCTS (12 Models) ---
+  // Insert products
+  console.log('Inserting products...');
   const allProducts = [
     ['omen-17', 'OMEN 17', 'gaming', 'Desktop-class power in a portable form factor.'],
     ['omen-16', 'OMEN 16', 'gaming', 'The perfectly balanced engine for competitive play.'],
@@ -164,10 +86,12 @@ export function seedDatabase(db: initSqlJs.Database) {
   allProducts.forEach(p => {
     db.run(`INSERT INTO products (id, model_name, persona_id, hero_description) VALUES (?, ?, ?, ?)`, p);
   });
+  console.log(`✓ Inserted ${allProducts.length} products`);
 
-  // --- STEP 4: INSERT DETAILED SPECS ---
+  // Insert specs
+  console.log('Inserting specs...');
   const techSpecs = [
-    // --- OMEN 17 ---
+    // OMEN 17
     ['omen-17', 'Processor', 'Intel® Core™ i9-13900HX', '24 Cores (8P+16E), up to 5.4 GHz', 'FiCpu'],
     ['omen-17', 'Graphics', 'NVIDIA® GeForce RTX™ 4080', '12 GB GDDR6 Dedicated', 'FiZap'],
     ['omen-17', 'Memory', '32 GB DDR5-5600 MHz', '2 x 16 GB (Upgradable)', 'FiServer'],
@@ -181,7 +105,7 @@ export function seedDatabase(db: initSqlJs.Database) {
     ['omen-17', 'Battery', '83 Wh Li-ion polymer', '330W Smart AC Adapter', 'FiBattery'],
     ['omen-17', 'OS', 'Windows 11 Home', 'High-end Gaming optimized', 'FiCommand'],
 
-    // --- OMEN 16 ---
+    // OMEN 16
     ['omen-16', 'Processor', 'Intel® Core™ i7-13700HX', '16 Cores, up to 5.0 GHz', 'FiCpu'],
     ['omen-16', 'Graphics', 'NVIDIA® GeForce RTX™ 4060', '8 GB GDDR6 Dedicated', 'FiZap'],
     ['omen-16', 'Memory', '16 GB DDR5-4800 MHz', '2 x 8 GB', 'FiServer'],
@@ -195,7 +119,9 @@ export function seedDatabase(db: initSqlJs.Database) {
     ['omen-16', 'Battery', '83 Wh Li-ion polymer', 'Fast Charge (50% in 30 min)', 'FiBattery'],
     ['omen-16', 'OS', 'Windows 11 Home', 'Game Pass Included (1 Month)', 'FiCommand'],
 
-    // --- VICTUS 16 ---
+    // Add more specs for other products...
+    // (Include all your specs from model.ts here)
+     // --- VICTUS 16 ---
     ['victus-16', 'Processor', 'AMD Ryzen™ 7 7840HS', '8 Cores, 16 Threads, AI Engine', 'FiCpu'],
     ['victus-16', 'Graphics', 'NVIDIA® GeForce RTX™ 4050', '6 GB GDDR6 Dedicated', 'FiZap'],
     ['victus-16', 'Memory', '16 GB DDR5-5600 MHz', '2 x 8 GB', 'FiServer'],
@@ -320,16 +246,15 @@ export function seedDatabase(db: initSqlJs.Database) {
     ['hp-laptop-15', 'Connectivity', 'Wi-Fi 6', 'Bluetooth® 5.3', 'FiWifi'],
     ['hp-laptop-15', 'OS', 'Windows 11 Home', 'Everyday essentials', 'FiCommand']
   ];
-
+  
   techSpecs.forEach(s => {
     db.run(`INSERT INTO product_specs (product_id, label, human_value, tech_value, icon_name) VALUES (?, ?, ?, ?, ?)`, s);
   });
+  console.log(`✓ Inserted ${techSpecs.length} specs`);
 
-  // --- STEP 5: INSERT ONLINE MEDIA LINKS ---
-  
-  // Define your Base URL
+  // Insert media
+  console.log('Inserting media...');
   const repoBaseUrl = 'https://raw.githubusercontent.com/bedarkartejas-cyber/helix-images/main';
-
   const onlineMedia = [
     // OMEN 17
     ['omen-17', 'image', `${repoBaseUrl}/Omen%2017/Img1.jpg`, 1, 1],
@@ -341,7 +266,8 @@ export function seedDatabase(db: initSqlJs.Database) {
     ['omen-16', 'image', `https://github.com/bedarkartejas-cyber/helix-images/blob/main/Omen%2016/img2.jpg?raw=true`, 2, 0],
     ['omen-16', 'image', `https://github.com/bedarkartejas-cyber/helix-images/blob/main/Omen%2016/img3.jpg?raw=true`, 3, 0],
 
-    // VICTUS 16
+    // Add all your media URLs here...
+        // VICTUS 16
     ['victus-16', 'image', `https://github.com/bedarkartejas-cyber/helix-images/blob/main/Victus%2016/img1.jpg?raw=true`, 1, 1],
     ['victus-16', 'image', `https://github.com/bedarkartejas-cyber/helix-images/blob/main/Victus%2016/img2.jpg?raw=true`, 2, 0],
     ['victus-16', 'image', `https://github.com/bedarkartejas-cyber/helix-images/blob/main/Victus%2016/img3.jpg?raw=true`, 3, 0],
@@ -389,252 +315,43 @@ export function seedDatabase(db: initSqlJs.Database) {
     // HP LAPTOP 15
     ['hp-laptop-15', 'image', `https://github.com/bedarkartejas-cyber/helix-images/blob/main/HP%20Laptop%2015/img1.jpg?raw=true`, 1, 1],
     ['hp-laptop-15', 'image', `https://github.com/bedarkartejas-cyber/helix-images/blob/main/HP%20Laptop%2015/img2.jpg?raw=true`, 2, 0],
-    ['hp-laptop-15', 'image', `https://github.com/bedarkartejas-cyber/helix-images/blob/main/HP%20Laptop%2015/img3.jpg?raw=true`, 3, 0]
+    ['hp-laptop-15', 'image', `https://github.com/bedarkartejas-cyber/helix-images/blob/main/HP%20Laptop%2015/img3.jpg?raw=true`, 3, 0],
   ];
-
+  
   onlineMedia.forEach(m => {
     db.run(`INSERT INTO product_media (product_id, media_type, file_path, display_order, is_hero_media) VALUES (?, ?, ?, ?, ?)`, m);
   });
+  console.log(`✓ Inserted ${onlineMedia.length} media items`);
 
-  persistToDisk(db);
-  console.log("Database reset and seeded successfully with YOUR GITHUB images.");
-}
-
-export interface Persona {
-  id: string;
-  name: string;
-  theme_color: string;
-  screensaver_path: string;
-}
-
-export interface ProductSpec {
-  id: number;
-  label: string;
-  human_value: string;
-  tech_value: string | null;
-  icon_name: string;
-}
-
-export interface ProductMedia {
-  id: number;
-  media_type: string;
-  file_path: string;
-  display_order: number;
-  is_hero_media: number;
-}
-
-export interface Product {
-  id: string;
-  model_name: string;
-  hero_description: string;
-  is_featured: number;
-  persona: Persona | null;
-  media: ProductMedia[];
-  specs: ProductSpec[];
-}
-
-export function getProducts(personaId?: string): Product[] {
-  if (!dbInstance) {
-    throw new Error("Database not initialized. Call setupDatabase first.");
-  }
-
-  let sql = `
-    SELECT
-      p.id,
-      p.model_name,
-      p.hero_description,
-      p.is_featured,
-      json_object(
-        'id', per.id,
-        'name', per.name,
-        'theme_color', per.theme_color,
-        'screensaver_path', per.screensaver_path
-      ) as persona,
-      (
-        SELECT json_group_array(
-          json_object(
-            'id', pm.id,
-            'media_type', pm.media_type,
-            'file_path', pm.file_path,
-            'display_order', pm.display_order,
-            'is_hero_media', pm.is_hero_media
-          )
-        )
-        FROM product_media pm
-        WHERE pm.product_id = p.id
-        ORDER BY pm.display_order
-      ) as media,
-      (
-        SELECT json_group_array(
-          json_object(
-            'id', ps.id,
-            'label', ps.label,
-            'human_value', ps.human_value,
-            'tech_value', ps.tech_value,
-            'icon_name', ps.icon_name
-          )
-        )
-        FROM product_specs ps
-        WHERE ps.product_id = p.id
-      ) as specs
-    FROM
-      products p
-    LEFT JOIN
-      personas per ON p.persona_id = per.id
-  `;
-
-  if (personaId) {
-    sql += ' WHERE p.persona_id = ?';
-  }
-
-  const stmt = dbInstance.prepare(sql);
-  if (personaId) {
-    stmt.bind([personaId]);
-  }
-
-  const products: Product[] = [];
-  while (stmt.step()) {
-    const row = stmt.getAsObject();
-    products.push({
-      id: row.id as string,
-      model_name: row.model_name as string,
-      hero_description: row.hero_description as string,
-      is_featured: row.is_featured as number,
-      persona: row.persona ? JSON.parse(row.persona as string) : null,
-      media: row.media ? JSON.parse(row.media as string) : [],
-      specs: row.specs ? JSON.parse(row.specs as string) : [],
-    });
-  }
-
-  stmt.free();
-  return products;
-}
-
-export function getRecommendations(answers: Record<string, string>): Product[] {
-  if (!dbInstance) {
-    throw new Error("Database not initialized. Call setupDatabase first.");
-  }
-
-  const scores: Record<string, number> = {
-    gaming: 0,
-    creator: 0,
-    office: 0,
-    student: 0,
-  };
-
-  if (answers.persona && Object.prototype.hasOwnProperty.call(scores, answers.persona)) {
-    scores[answers.persona] += 10;
-  }
-
-  if (answers.mobility === 'desktop') {
-    scores.gaming += 2;
-    scores.creator += 2;
-  } else if (answers.mobility === 'portable') {
-    scores.office += 2;
-    scores.student += 2;
-  }
-
-  if (answers.workload === 'multitasking') {
-    scores.gaming += 2;
-    scores.creator += 2;
-  } else if (answers.workload === 'essentials') {
-    scores.student += 2;
-    scores.office += 1;
-  }
-
-  if (answers.feature === 'display') {
-    scores.creator += 3;
-  } else if (answers.feature === 'battery') {
-    scores.student += 2;
-    scores.office += 2;
-  } else if (answers.feature === 'security') {
-    scores.office += 3;
-  }
-
-  let bestPersona; 
-  let maxScore = -1;
+  // Export to file
+  const data = db.export();
+  const buffer = Buffer.from(data);
+  const seedDbPath = path.join(__dirname, '../resources/seed.db');
   
-  for (const persona in scores) {
-    if (scores[persona] > maxScore) {
-      maxScore = scores[persona];
-      bestPersona = persona;
-    }
+  // Create resources directory if it doesn't exist
+  const resourcesDir = path.dirname(seedDbPath);
+  if (!fs.existsSync(resourcesDir)) {
+    fs.mkdirSync(resourcesDir, { recursive: true });
   }
-
-  console.log("Recommended persona: ", bestPersona)
-  const allMatchingProducts = getProducts(bestPersona);
-  return allMatchingProducts.slice(0, 3);
+  
+  fs.writeFileSync(seedDbPath, buffer);
+  console.log(`✓ Seed database created at: ${seedDbPath}`);
+  
+  // Verify
+  const productCount = db.exec('SELECT COUNT(*) as count FROM products')[0]?.values[0][0];
+  const specsCount = db.exec('SELECT COUNT(*) as count FROM product_specs')[0]?.values[0][0];
+  const mediaCount = db.exec('SELECT COUNT(*) as count FROM product_media')[0]?.values[0][0];
+  
+  console.log('\n=== Database Summary ===');
+  console.log(`Products: ${productCount}`);
+  console.log(`Specs: ${specsCount}`);
+  console.log(`Media: ${mediaCount}`);
+  console.log('========================\n');
+  
+  db.close();
 }
 
-// --- NEW FUNCTION: GET SINGLE PRODUCT BY ID ---
-export function getProductById(productId: string): Product | null {
-  if (!dbInstance) {
-    throw new Error("Database not initialized.");
-  }
-
-  const sql = `
-    SELECT
-      p.id,
-      p.model_name,
-      p.hero_description,
-      p.is_featured,
-      json_object(
-        'id', per.id,
-        'name', per.name,
-        'theme_color', per.theme_color,
-        'screensaver_path', per.screensaver_path
-      ) as persona,
-      (
-        SELECT json_group_array(
-          json_object(
-            'id', pm.id,
-            'media_type', pm.media_type,
-            'file_path', pm.file_path,
-            'display_order', pm.display_order,
-            'is_hero_media', pm.is_hero_media
-          )
-        )
-        FROM product_media pm
-        WHERE pm.product_id = p.id
-        ORDER BY pm.display_order
-      ) as media,
-      (
-        SELECT json_group_array(
-          json_object(
-            'id', ps.id,
-            'label', ps.label,
-            'human_value', ps.human_value,
-            'tech_value', ps.tech_value,
-            'icon_name', ps.icon_name
-          )
-        )
-        FROM product_specs ps
-        WHERE ps.product_id = p.id
-      ) as specs
-    FROM
-      products p
-    LEFT JOIN
-      personas per ON p.persona_id = per.id
-    WHERE p.id = ?
-  `;
-
-  const stmt = dbInstance.prepare(sql);
-  stmt.bind([productId]);
-
-  let product: Product | null = null;
-  if (stmt.step()) {
-    const row = stmt.getAsObject();
-    product = {
-      id: row.id as string,
-      model_name: row.model_name as string,
-      hero_description: row.hero_description as string,
-      is_featured: row.is_featured as number,
-      persona: row.persona ? JSON.parse(row.persona as string) : null,
-      media: row.media ? JSON.parse(row.media as string) : [],
-      specs: row.specs ? JSON.parse(row.specs as string) : [],
-    };
-  }
-
-  stmt.free();
-  return product;
-}
+createSeedDatabase().catch(error => {
+  console.error('Failed to create seed database:', error);
+  process.exit(1);
+});

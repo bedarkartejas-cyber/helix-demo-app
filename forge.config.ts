@@ -12,7 +12,8 @@ const config: ForgeConfig = {
     asar: true, // <--- CHANGED: Just set this to true, remove the 'unpack' object
     extraResource: [
       './node_modules/sql.js/dist/sql-wasm.wasm',
-      './node_modules/sql.js/dist/sql-wasm.js'
+      './node_modules/sql.js/dist/sql-wasm.js',
+      './resources/seed.db',
     ]
   },
   rebuildConfig: {},

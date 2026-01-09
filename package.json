@@ -10,7 +10,8 @@
         "make": "electron-forge make",
         "publish": "electron-forge publish",
         "lint": "eslint --ext .ts,.tsx .",
-        "watch:css": "npx @tailwindcss/cli -i ./src/index.css -o ./src/output.css --watch"
+        "watch:css": "npx @tailwindcss/cli -i ./src/index.css -o ./src/output.css --watch",
+        "create-seed-db": "node scripts/create-seed-db.js"
     },
     "keywords": [],
     "author": {

@@ -116,7 +116,7 @@ export default function Questionnaire() {
                             <h1 className="text-5xl font-light mb-4 animate-pulse">
                                 Finding your match...
                             </h1>
-                            <p className="text-zinc-400">
+                            <p className="text-zinc-400 dark:text-zinc-400">
                                 Analyzing your answers to find the best products
                                 for you.
                             </p>
@@ -126,7 +126,7 @@ export default function Questionnaire() {
                             <h1 className="text-5xl font-light mb-4">
                                 Here are your recommendations!
                             </h1>
-                            <p className="text-zinc-400 mb-12">
+                            <p className="text-zinc-400 dark:text-zinc-400 mb-12">
                                 Based on your answers, we think you'll love
                                 these.
                             </p>
@@ -134,9 +134,9 @@ export default function Questionnaire() {
                                 {recommendations.map((product) => (
                                     <div
                                         key={product.id}
-                                        className="group border border-zinc-800 rounded-3xl p-6 bg-zinc-950 text-left flex flex-col hover:border-zinc-700 transition-all hover:shadow-2xl hover:shadow-zinc-900"
+                                        className="group border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 bg-zinc-50 dark:bg-zinc-950 text-left flex flex-col hover:border-zinc-300 dark:hover:border-zinc-700 transition-all hover:shadow-2xl hover:shadow-zinc-900"
                                     >
-                                        <div className="aspect-video bg-zinc-900 rounded-2xl mb-6 overflow-hidden relative">
+                                        <div className="aspect-video bg-zinc-100 dark:bg-zinc-900 rounded-2xl mb-6 overflow-hidden relative">
                                             {product.media &&
                                             product.media.length > 0 ? (
                                                 <img
@@ -148,12 +148,12 @@ export default function Questionnaire() {
                                                     className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                                                 />
                                             ) : (
-                                                <div className="w-full h-full flex items-center justify-center text-zinc-600 font-medium">
+                                                <div className="w-full h-full flex items-center justify-center text-zinc-500 dark:text-zinc-600 font-medium">
                                                     {product.model_name} Visual
                                                 </div>
                                             )}
                                         </div>
-                                        <h3 className="text-xl font-bold text-white tracking-tight">
+                                        <h3 className="text-xl font-bold text-white dark:text-white tracking-tight">
                                             {product.model_name}
                                         </h3>
                                         <p className="text-zinc-400 mt-3 leading-relaxed flex-grow text-sm">

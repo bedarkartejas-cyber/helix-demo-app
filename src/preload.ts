@@ -1,13 +1,14 @@
-import { contextBridge, ipcRenderer } from 'electron';
+import { contextBridge, ipcRenderer } from "electron";
 
-contextBridge.exposeInMainWorld('electronAPI', {
-  getProducts: (personaId?: string) =>
-    ipcRenderer.invoke('get-products', personaId),
-    
-  getRecommendations: (answers: Record<string, string>) =>
-    ipcRenderer.invoke('get-recommendations', answers),
+contextBridge.exposeInMainWorld("electronAPI", {
+    getProducts: (personaId?: string) =>
+        ipcRenderer.invoke("get-products", personaId),
 
-  // --- NEW FUNCTION ---
-  getProductById: (id: string) =>
-    ipcRenderer.invoke('get-product-by-id', id),
+    getRecommendations: (answers: Record<string, string>) =>
+        ipcRenderer.invoke("get-recommendations", answers),
+
+    // --- NEW FUNCTION ---
+    getProductById: (id: string) => ipcRenderer.invoke("get-product-by-id", id),
+
+    resetDatabase: () => ipcRenderer.invoke("reset-database"),
 });
