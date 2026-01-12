@@ -116,6 +116,7 @@ export async function setupDatabase() {
         persona_id TEXT,
         hero_description TEXT, 
         is_featured INTEGER DEFAULT 0,
+        url TEXT,
         FOREIGN KEY (persona_id) REFERENCES personas(id)
     );
 
@@ -198,77 +199,89 @@ export function seedDatabase(db: initSqlJs.Database) {
             "OMEN 17",
             "gaming",
             "Desktop-class power in a portable form factor.",
+            "https://victus17.vercel.app/",
         ],
         [
             "omen-16",
             "OMEN 16",
             "gaming",
             "The perfectly balanced engine for competitive play.",
+            "https://victus17.vercel.app/",
         ],
         [
             "victus-16",
             "Victus 16",
             "gaming",
             "Serious gaming performance at an accessible value.",
+            "https://victus17.vercel.app//",
         ],
         [
             "spectre-16",
             "Spectre x360 16",
             "creator",
             "A 16-inch canvas for your biggest creative ideas.",
+            "https://pavillion-plus14oled.vercel.app/",
         ],
         [
             "envy-16",
             "Envy 16",
             "creator",
             "Power and precision for editing 4K video on the go.",
+            "https://pavillion-plus14oled.vercel.app/",
         ],
         [
             "pavilion-plus-14-oled",
             "Pavilion Plus 14 OLED",
             "creator",
             "Compact creator power with a stunning OLED display.",
+            "https://pavillion-plus14oled.vercel.app/",
         ],
         [
             "elitebook-840",
             "EliteBook 840 G10",
             "office",
             "The corporate standard for security and performance.",
+            "https://victus17.vercel.app/",
         ],
         [
             "probook-450",
             "ProBook 450 G10",
             "office",
             "Essential business power for the modern professional.",
+            "https://pavillion-plus14oled.vercel.app/",
         ],
         [
             "elite-x360",
             "Elite x360 830",
             "office",
             "Premium flexibility for executive leaders.",
+            "https://victus17.vercel.app/",
         ],
         [
             "pavilion-14-std",
             "Pavilion Plus 14",
             "student",
             "The all-day companion for lectures and late-night study.",
+            "https://pavillion-plus14oled.vercel.app/",
         ],
         [
             "pavilion-x360",
             "Pavilion x360 14",
             "student",
             "The versatile laptop for taking notes and streaming movies.",
+            "https://pavillion-plus14oled.vercel.app/",
         ],
         [
             "hp-laptop-15",
             "HP Laptop 15",
             "student",
             "Affordable, reliable, and ready for every assignment.",
+            "https://pavillion-plus14oled.vercel.app/",
         ],
     ];
     allProducts.forEach((p) => {
         db.run(
-            `INSERT INTO products (id, model_name, persona_id, hero_description) VALUES (?, ?, ?, ?)`,
+            `INSERT INTO products (id, model_name, persona_id, hero_description, url) VALUES (?, ?, ?, ?, ?)`,
             p
         );
     });
@@ -1483,7 +1496,7 @@ export function seedDatabase(db: initSqlJs.Database) {
             "omen-17",
             "bento",
             "Pure Performance",
-            "We packed the OMEN 17 only with what you need. This starts with the new AMD Ryzen 8040 Series CPUs, which with a dedicated NPU for ultra performance efficiency, keeps your frames high and your thermal temps low. Combined with an immersive, lightning quick 17” 240hz IPS display and up to an NVIDIA® RTX™ 4070, the OMEN 17 has everything you need to win and nothing you don’t​.",
+            "We packed the OMEN 17 only with what you need. This starts with the new AMD Ryzen 8040 Series CPUs, which with a dedicated NPU for ultra performance efficiency, keeps your frames high and your thermal temps low. Combined with an immersive, lightning quick 17” 240hz IPS display and up to an NVIDIA® RTX™ 4070, the OMEN 17 has everything you need to win and nothing you don’t.",
             "",
             JSON.stringify({
                 align: "center",
@@ -1494,8 +1507,7 @@ export function seedDatabase(db: initSqlJs.Database) {
         [
             "omen-17",
             "bento",
-            "MORE BANG LESS BUCK​",
-            "OMEN 17 DELIVERS LEGENDARY GAMING PERFORMANCE AT AN INCREDIBLE VALUE RIGHT OUT OF THE BOX​.",
+            "MORE BANG LESS BUCK",
             "https://cdn.jsdelivr.net/gh/kartiknesari/helixApp@assets-only/src/assets/HP-OMEN-17-Gaming-Laptop/images/imgi_14_AMD-Chip%402x.png",
             JSON.stringify({
                 align: "left",
@@ -1506,8 +1518,8 @@ export function seedDatabase(db: initSqlJs.Database) {
         [
             "omen-17",
             "bento",
-            "MORE POWER, MORE PLAY WITH AMD RYZEN AI​",
-            "With the OMEN 17, AI is always working on your behalf. The AMD Ryzen™ 8040 CPUs feature a combination of powerful AI accelerators that help unlock new levels of play, performance and efficiency.​",
+            "MORE POWER, MORE PLAY WITH AMD RYZEN AI",
+            "With the OMEN 17, AI is always working on your behalf. The AMD Ryzen™ 8040 CPUs feature a combination of powerful AI accelerators that help unlock new levels of play, performance and efficiency.",
             "https://cdn.jsdelivr.net/gh/kartiknesari/helixApp@assets-only/src/assets/HP-OMEN-17-Gaming-Laptop/images/imgi_2_242448702-A_AMD_Ryzen_9_Badge_RGB.png",
             JSON.stringify({
                 align: "left",
@@ -1600,6 +1612,7 @@ export interface Product {
     media: ProductMedia[];
     specs: ProductSpec[];
     pdp_sections: PDPSection[];
+    url: string;
 }
 
 export function getProducts(personaId?: string): Product[] {
@@ -1613,6 +1626,7 @@ export function getProducts(personaId?: string): Product[] {
       p.model_name,
       p.hero_description,
       p.is_featured,
+      p.url,
       json_object(
         'id', per.id,
         'name', per.name,
@@ -1692,6 +1706,7 @@ export function getProducts(personaId?: string): Product[] {
             pdp_sections: row.pdp_sections
                 ? JSON.parse(row.pdp_sections as string)
                 : [],
+            url: row.url as string,
         });
     }
 
@@ -1769,6 +1784,7 @@ export function getProductById(productId: string): Product | null {
       p.id,
       p.model_name,
       p.hero_description,
+      p.url,
       p.is_featured,
       json_object(
         'id', per.id,
@@ -1844,6 +1860,7 @@ export function getProductById(productId: string): Product | null {
             pdp_sections: row.pdp_sections
                 ? JSON.parse(row.pdp_sections as string)
                 : [],
+            url: row.url as string,
         };
     }
 

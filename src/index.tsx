@@ -4,6 +4,7 @@ import { Moon, Sun } from "lucide-react";
 import ProductCatalog from "./app/catalog";
 import Questionnaire from "./app/Questionnaire";
 import ProductDetail from "./app/ProductDetail"; // <--- Import the new page
+import ComparePage from "./app/ComparePage";
 import Screensaver from "./app/screensaver";
 import { ThemeProvider, useTheme } from "./ThemeContext";
 
@@ -95,6 +96,7 @@ export default function App() {
 
                     {/* --- NEW ROUTE ADDED HERE --- */}
                     <Route path="/product/:id" element={<ProductDetail />} />
+                    <Route path="/compare" element={<ComparePage />} />
                 </Routes>
             </HashRouter>
         </ThemeProvider>

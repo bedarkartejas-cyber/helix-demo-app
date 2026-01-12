@@ -1,11 +1,16 @@
 import React from "react";
+import { motion } from "framer-motion";
 
 const Product = () => {
     return (
         <div className="w-full flex flex-col gap-x-8 overflow-y-auto bg-black text-white pb-16 scrollbar-hide">
             {/* Section 1: Hero */}
             <div className="flex flex-row md:flex-row items-center justify-between px-12 min-h-screen">
-                <div
+                <motion.div
+                    initial={{ opacity: 0, x: -20 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    viewport={{ once: true, margin: "-100px" }}
+                    transition={{ duration: 0.8, ease: "easeOut" }}
                     style={{ padding: "32px" }}
                     className="w-1/3 space-y-6 flex-col"
                 >
@@ -30,18 +35,28 @@ const Product = () => {
                             className="h-12 object-contain"
                         />
                     </div>
-                </div>
-                <div className="flex-1 w-2/3 flex justify-center">
+                </motion.div>
+                <motion.div
+                    initial={{ opacity: 0, x: 20 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    viewport={{ once: true, margin: "-100px" }}
+                    transition={{ duration: 0.8, ease: "easeOut" }}
+                    className="flex-1 w-2/3 flex justify-center"
+                >
                     <img
                         src="https://cdn.jsdelivr.net/gh/kartiknesari/helixApp@assets-only/src/assets/HP-OMEN-17-Gaming-Laptop/images/imgi_4_Hero-Laptop-Cropped%402x.png"
                         alt="OMEN 17 Laptop"
                         className="max-w-full h-auto"
                     />
-                </div>
+                </motion.div>
             </div>
 
             {/* Section 2: Pure Performance */}
-            <div
+            <motion.div
+                initial={{ opacity: 0, y: -20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.5 }}
+                transition={{ duration: 1.2, ease: "easeOut" }}
                 style={{ marginTop: "12em", padding: "32px" }}
                 className="flex flex-col items-center justify-center p-12 text-center space-y-6 bg-black"
             >
@@ -55,10 +70,14 @@ const Product = () => {
                     an NVIDIA® RTX™ 4070, the OMEN 17 has everything you need to
                     win and nothing you don’t.
                 </p>
-            </div>
+            </motion.div>
 
             {/* Section 3: More Bang Less Buck */}
-            <div
+            <motion.div
+                initial={{ opacity: 0, y: -20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.5 }}
+                transition={{ duration: 1.2, ease: "easeOut" }}
                 style={{ marginBottom: "8em" }}
                 className="flex flex-col md:flex-row justify-start p-12 gap-12 mt-8"
             >
@@ -83,10 +102,14 @@ const Product = () => {
                         </p>
                     </div>
                 </div>
-            </div>
+            </motion.div>
 
             {/* Section 4: AI */}
-            <div
+            <motion.div
+                initial={{ opacity: 0, x: +50 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true, amount: 0.3 }}
+                transition={{ duration: 1.2, ease: "easeOut" }}
                 style={{ marginTop: "8em", marginBottom: "8em" }}
                 className="gap-12 bg-black"
             >
@@ -114,10 +137,14 @@ const Product = () => {
                         </p>
                     </div>
                 </div>
-            </div>
+            </motion.div>
 
             {/* Section 5: Beyond Fast */}
-            <div
+            <motion.div
+                initial={{ opacity: 0, y: +50 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.6 }}
+                transition={{ duration: 1.2, ease: "easeOut" }}
                 style={{ marginTop: "8em", marginBottom: "8em" }}
                 className="flex flex-col items-center justify-center p-12 space-y-8 mt-16"
             >
@@ -145,7 +172,7 @@ const Product = () => {
                         className="h-full object-scale-down rounded-lg max-w-full"
                     />
                 </div>
-            </div>
+            </motion.div>
             {/* <div className="relative mt-8 w-full">
                 <img
                     src="https://cdn.jsdelivr.net/gh/kartiknesari/helixApp@assets-only/src/assets/HP-OMEN-17-Gaming-Laptop/images/imgi_18_Flat-Full-Angle%402x.jpg"
@@ -168,7 +195,11 @@ const Product = () => {
                     </p>
                 </div>
             </div> */}
-            <div
+            <motion.div
+                initial={{ opacity: 0, y: +50 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.6 }}
+                transition={{ duration: 1.2, ease: "easeOut" }}
                 style={{ marginTop: "8em", marginBottom: "8em" }}
                 className="flex flex-row gap-x-8 mt-8 w-full"
             >
@@ -192,14 +223,23 @@ const Product = () => {
                         its way.
                     </p>
                 </div>
-            </div>
+            </motion.div>
+
+            {/* Audio */}
             <div
                 style={{
                     margin: "8em 2em",
                 }}
                 className="flex flex-row gap-x-8 mt-8 w-full pb-24"
             >
-                <div style={{ marginRight: "2em" }} className="flex-1">
+                <motion.div
+                    initial={{ opacity: 0, x: -50 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    viewport={{ once: true, amount: 0.6 }}
+                    transition={{ duration: 1.2, ease: "easeOut" }}
+                    style={{ marginRight: "2em" }}
+                    className="flex-1"
+                >
                     <p className="text-sm font-bold tracking-widest text-gray-400">
                         AUDIO
                     </p>
@@ -213,13 +253,19 @@ const Product = () => {
                         heard to give you a bigger advantage and more immersive
                         gaming experience.
                     </p>
-                </div>
-                <div className="flex-1">
+                </motion.div>
+                <motion.div
+                    initial={{ opacity: 0, x: +50 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    viewport={{ once: true, amount: 0.6 }}
+                    transition={{ duration: 1.2, ease: "easeOut" }}
+                    className="flex-1"
+                >
                     <img
                         src="https://cdn.jsdelivr.net/gh/kartiknesari/helixApp@assets-only/src/assets/HP-OMEN-17-Gaming-Laptop/images/imgi_21_Callout-02%402x.jpg"
                         className="object-contain"
                     />
-                </div>
+                </motion.div>
             </div>
         </div>
     );

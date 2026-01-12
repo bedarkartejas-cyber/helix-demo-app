@@ -1,9 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Product } from "../interfaces";
-import BentoLayout from "./pdp/layoutConfig";
-import { X } from "lucide-react";
-import ComparisonTable from "./comparison";
+import WebComponent from "./WebComponent";
 
 export default function ProductDetail() {
     const { id } = useParams<{ id: string }>();
@@ -14,11 +12,6 @@ export default function ProductDetail() {
     const [loadError, setLoadError] = useState(false);
 
     const [product, setProduct] = useState<Product | null>(null);
-    const [allProducts, setAllProducts] = useState<Product[]>([]);
-    const [pdpTheme, setPdpTheme] = useState({
-        backgroundColor: "#111",
-        textColor: "#fff",
-    });
 
     /*
     const [product, setProduct] = useState<Product | null>(null);
@@ -52,7 +45,6 @@ export default function ProductDetail() {
                 const current = await window.electronAPI.getProductById(id);
                 const all = await window.electronAPI.getProducts();
                 setProduct(current);
-                setAllProducts(all);
             } catch (error) {
                 console.error("Failed to load product data", error);
             }
@@ -143,7 +135,7 @@ export default function ProductDetail() {
         );
     }
 
-    if (!StaticComponent) {
+    if (!StaticComponent || !product) {
         return (
             <div className="h-screen flex items-center justify-center bg-black text-white">
                 Loading Experience...
@@ -151,21 +143,20 @@ export default function ProductDetail() {
         );
     }
 
-    const layout_config = product.pdp_sections[0].layout_config;
-    console.log(layout_config);
+    console.log(product);
     return (
         <div className="relative h-screen w-screen overflow-y-auto scrollbar-hide">
-            <StaticComponent />
-            <div className="py-2">
+            <WebComponent url={product.url} />
+            {/* <div className="py-2">
                 <OffersSection />
-            </div>
+            </div> */}
             {/* Render the new Comparison Component */}
-            {product && (
+            {/* {product && (
                 <ComparisonTable
                     currentProduct={product}
                     allProducts={allProducts}
                 />
-            )}
+            )} */}
             {/* Button will appear after all the static component content */}
             <div
                 style={{
@@ -175,13 +166,13 @@ export default function ProductDetail() {
                     opacity: "95%",
                     // backgroundColor:
                     //     layout_config.theme === "dark" ? "black" : "white", // High contrast flip
-                    color: layout_config.theme === "dark" ? "white" : "black",
+                    // color: layout_config.theme === "dark" ? "white" : "black",
                 }}
                 className=" fixed flex w-full bg-transparent p-12 scrollbar-hide"
             >
                 <button
                     onClick={() => navigate("/catalog")}
-                    className={`p-4 ${layout_config.theme === "dark" ? "bg-white-800" : "bg-zinc-800"} text-white rounded-full border border-zinc-600`}
+                    className={`p-4 bg-zinc-800 text-white rounded-full border border-zinc-600`}
                 >
                     Back to home
                 </button>

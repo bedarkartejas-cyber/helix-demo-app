@@ -48,10 +48,24 @@ export interface Product {
     persona: Persona | null;
     media: ProductMedia[];
     specs: ProductSpec[];
-    pdp_sections: PDPSection[]; // New field
+    pdp_sections: PDPSection[];
+    url: string; // New field
 }
 
 export interface IElectronAPI {
+    updateWebViewBounds(arg0: {
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+    }): unknown;
+    detachWebView(): unknown;
+    attachWebView(arg0: {
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+    }): unknown;
     getProducts: (personaId?: string) => Promise<Product[]>;
     getRecommendations: (answers: Record<string, string>) => Promise<Product[]>;
 

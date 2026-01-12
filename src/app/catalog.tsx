@@ -45,9 +45,13 @@ export default function ProductCatalog() {
                                     : "border-transparent hover:bg-white hover:shadow-md"
                             }`}
                         >
-                            <span className={`capitalize font-bold relative z-10 ${
-                                activePersona === p ? "text-blue-700" : "text-slate-600 group-hover:text-slate-900"
-                            }`}>
+                            <span
+                                className={`capitalize font-bold relative z-10 ${
+                                    activePersona === p
+                                        ? "text-blue-700"
+                                        : "text-slate-600 group-hover:text-slate-900"
+                                }`}
+                            >
                                 {p}
                             </span>
                         </button>
@@ -55,11 +59,24 @@ export default function ProductCatalog() {
                     <button
                         onClick={() => setActivePersona(null)}
                         className={`mt-4 text-sm font-medium transition-colors ${
-                            activePersona === null ? "text-slate-900 underline" : "text-slate-400 hover:text-slate-600"
+                            activePersona === null
+                                ? "text-slate-900 underline"
+                                : "text-slate-400 hover:text-slate-600"
                         }`}
                     >
                         Show All Series
                     </button>
+                </div>
+
+                <div className="mt-auto pt-6 border-t border-slate-200">
+                    <Link
+                        to="/compare"
+                        className="flex items-center justify-center w-full p-3 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 shadow-sm transition-colors"
+                    >
+                        <span className="font-semibold text-slate-700">
+                            Compare Items
+                        </span>
+                    </Link>
                 </div>
             </aside>
 
@@ -69,7 +86,9 @@ export default function ProductCatalog() {
                     <header className="mb-10">
                         <h1 className="text-4xl font-light text-slate-900">
                             {activePersona ? (
-                                <span className="capitalize">{activePersona} Series</span>
+                                <span className="capitalize">
+                                    {activePersona} Series
+                                </span>
                             ) : (
                                 "All Products"
                             )}
@@ -78,7 +97,7 @@ export default function ProductCatalog() {
                             Select a device to explore its unique experience.
                         </p>
                     </header>
-                    
+
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
                         {products.map((product) => (
                             <div
@@ -87,9 +106,10 @@ export default function ProductCatalog() {
                             >
                                 {/* IMAGE SECTION */}
                                 <div className="aspect-video bg-slate-50 rounded-2xl mb-6 overflow-hidden relative">
-                                    {product.media && product.media.length > 0 ? (
-                                        <img 
-                                            src={product.media[0].file_path} 
+                                    {product.media &&
+                                    product.media.length > 0 ? (
+                                        <img
+                                            src={product.media[0].file_path}
                                             alt={product.model_name}
                                             className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                                         />
@@ -107,10 +127,13 @@ export default function ProductCatalog() {
                                 <p className="text-slate-500 mt-3 leading-relaxed min-h-[3.5rem] text-sm">
                                     {product.hero_description}
                                 </p>
-                                
+
                                 <div className="mt-auto pt-8">
                                     {/* --- UPDATED BUTTON WITH LINK --- */}
-                                    <Link to={`/product/${product.id}`} className="block w-full">
+                                    <Link
+                                        to={`/product/${product.id}`}
+                                        className="block w-full"
+                                    >
                                         <button className="w-full py-4 bg-slate-900 text-white rounded-2xl font-bold group-hover:bg-blue-600 transition-colors shadow-lg shadow-slate-200">
                                             Explore Experience
                                         </button>

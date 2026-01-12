@@ -4,6 +4,7 @@ import ProductCatalog from "./catalog";
 import Questionnaire from "./Questionnaire";
 import ProductDetail from "./ProductDetail"; // <--- Import the new page
 import Screensaver from "./screensaver";
+import ComparePage from "./ComparePage";
 
 function HomePage() {
     const handleReset = async () => {
@@ -85,6 +86,7 @@ export default function App() {
 
                 {/* --- NEW ROUTE ADDED HERE --- */}
                 <Route path="/product/:id" element={<ProductDetail />} />
+                <Route path="/compare" element={<ComparePage />} />
             </Routes>
         </HashRouter>
     );

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, screen } from "electron";
+import { app, BrowserWindow, ipcMain, screen, WebContentsView } from "electron";
 import fs from "fs";
 import path from "path";
 import started from "electron-squirrel-startup";
@@ -13,6 +13,7 @@ import {
 // Create a log file in userData
 const logPath = path.join(app.getPath("userData"), "app.log");
 const logStream = fs.createWriteStream(logPath, { flags: "a" });
+let externalView: WebContentsView | null = null;
 
 // Override console.log to also write to file
 const originalLog = console.log;
@@ -54,6 +55,7 @@ const createWindow = () => {
         height: height,
         webPreferences: {
             preload: path.join(__dirname, "preload.js"),
+            webviewTag: true,
         },
     });
 
@@ -147,6 +149,31 @@ app.whenReady().then(async () => {
         } catch (error) {
             console.error("Failed to reset database:", error);
             return { success: false, error: String(error) };
+        }
+    });
+
+    // For WebContentsView
+    ipcMain.handle("attach-web-view", async (event, { bounds, url }) => {
+        const win = BrowserWindow.fromWebContents(event.sender);
+        if (!win) return;
+
+        if (!externalView) {
+            externalView = new WebContentsView();
+            await externalView.webContents.loadURL(url);
+        }
+
+        win.contentView.addChildView(externalView);
+        externalView.setBounds(bounds); // Align to the React placeholder
+    });
+    ipcMain.handle("update-web-view-bounds", (event, bounds) => {
+        if (externalView) {
+            externalView.setBounds(bounds);
+        }
+    });
+    ipcMain.handle("detach-web-view", (event) => {
+        const win = BrowserWindow.fromWebContents(event.sender);
+        if (win && externalView) {
+            win.contentView.removeChildView(externalView);
         }
     });
 
