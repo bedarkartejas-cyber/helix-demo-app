@@ -50,6 +50,18 @@ async function createSeedDatabase() {
         icon_name TEXT,
         FOREIGN KEY (product_id) REFERENCES products(id)
     );
+
+    CREATE TABLE IF NOT EXISTS pdp_sections (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      product_id TEXT,
+      section_type TEXT,    -- 'hero', 'bento', 'feature-split'
+      title TEXT,
+      description TEXT,
+      media_path TEXT,      -- Local path from your ASSETS folder
+      layout_config TEXT,   -- JSON: { "span": "large", "align": "right", "theme": "dark" }
+      display_order INTEGER,
+      FOREIGN KEY (product_id) REFERENCES products(id)
+    );
   `);
 
   db.run('PRAGMA foreign_keys = ON');
@@ -323,6 +335,64 @@ async function createSeedDatabase() {
   });
   console.log(`✓ Inserted ${onlineMedia.length} media items`);
 
+  
+    const assets = [
+        [
+            "omen-17",
+            "bento",
+            "Pro-Level Gaming",
+            "Packed with a jaw-dropping display, next-gen CPU and GPU. Essentially everything you need for epic gaming and nothing you don’t.",
+            "https://cdn.jsdelivr.net/gh/kartiknesari/helixApp@assets-only/src/assets/HP-OMEN-17-Gaming-Laptop/images/imgi_4_Hero-Laptop-Cropped%402x.png",
+            JSON.stringify({
+                align: "left",
+                theme: "dark",
+                sub_brand: "OMEN 17 GAMING LAPTOP",
+                logos: [{
+                    src: "https://cdn.jsdelivr.net/gh/kartiknesari/helixApp@assets-only/src/assets/HP-OMEN-17-Gaming-Laptop/images/imgi_2_242448702-A_AMD_Ryzen_9_Badge_RGB.png",
+                    alt: "AMD Ryzen 9 logo",
+                    height: "h-20",
+                }, {
+                    src: "https://cdn.jsdelivr.net/gh/kartiknesari/helixApp@assets-only/src/assets/HP-OMEN-17-Gaming-Laptop/images/imgi_3_nvidia-geforce-rtx.png",
+                    alt: "NVIDIA GeForce RTX logo",
+                    height: "h-12",
+                }, ],
+                textMaxWidth: "max-w-xl",
+                styles: {
+                    title: {
+                        size: "text-5xl",
+                        weight: "font-bold",
+                    },
+                    description: {
+                        size: "text-lg",
+                        weight: "font-light",
+                    },
+                },
+            }),
+            1,
+        ],
+        ["omen-16", "", "", "", "", JSON.stringify({theme: "dark"})],
+        ["victus-16", "", "", "", "", JSON.stringify({theme: "dark"})],
+        ["spectre-16", "", "", "", "", JSON.stringify({theme: "dark"})],
+        ["envy-16", "", "", "", "", JSON.stringify({theme: "dark"})],
+        ["pavilion-plus-14-oled", "", "", "", "", JSON.stringify({theme: "light"})],
+        ["elitebook-840", "", "", "", "", JSON.stringify({theme: "light"})],
+        ["probook-450", "", "", "", "", JSON.stringify({theme: "light"})],
+        ["elite-x360", "", "", "", "", JSON.stringify({theme: "light"})],
+        ["pavilion-14-std", "", "", "", "", JSON.stringify({theme: "light"})],
+        ["pavilion-x360", "", "", "", "", JSON.stringify({theme: "light"})],
+        ["hp-laptop-15", "", "", "", "", JSON.stringify({theme: "light"})],
+    ];
+
+    assets.forEach((m) => {
+        db.run(
+            `INSERT INTO pdp_sections (product_id, section_type, title, description, media_path, layout_config, display_order) values (?,?,?,?,?,?,?)`,
+            m
+        );
+    });
+    console.log(`✓ Inserted ${assets.length} media items`);
+   
+
+
   // Export to file
   const data = db.export();
   const buffer = Buffer.from(data);
@@ -341,11 +411,14 @@ async function createSeedDatabase() {
   const productCount = db.exec('SELECT COUNT(*) as count FROM products')[0]?.values[0][0];
   const specsCount = db.exec('SELECT COUNT(*) as count FROM product_specs')[0]?.values[0][0];
   const mediaCount = db.exec('SELECT COUNT(*) as count FROM product_media')[0]?.values[0][0];
+  const assetsCount = db.exec('SELECT COUNT(*) as count FROM pdp_sections')[0]?.values[0][0];
   
   console.log('\n=== Database Summary ===');
   console.log(`Products: ${productCount}`);
   console.log(`Specs: ${specsCount}`);
   console.log(`Media: ${mediaCount}`);
+  console.log(`Assets: ${assetsCount}`);
+
   console.log('========================\n');
   
   db.close();

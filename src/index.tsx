@@ -1,10 +1,10 @@
 import React from "react";
 import { HashRouter, Routes, Route, Link } from "react-router-dom";
 import { Moon, Sun } from "lucide-react";
-import ProductCatalog from "./catalog";
-import Questionnaire from "./Questionnaire";
-import ProductDetail from "./ProductDetail"; // <--- Import the new page
-import Screensaver from "./Screensaver";
+import ProductCatalog from "./app/catalog";
+import Questionnaire from "./app/Questionnaire";
+import ProductDetail from "./app/ProductDetail"; // <--- Import the new page
+import Screensaver from "./app/screensaver";
 import { ThemeProvider, useTheme } from "./ThemeContext";
 
 function ThemeToggleButton() {

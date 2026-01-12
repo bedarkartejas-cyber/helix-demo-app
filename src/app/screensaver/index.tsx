@@ -5,7 +5,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 
 export default function Screensaver() {
     // 5 seconds = 5000 ms
-    const isIdle = useIdle(30000);
+    const isIdle = useIdle(300000);
     const navigate = useNavigate();
     const location = useLocation();
 

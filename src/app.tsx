@@ -1,7 +1,7 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
+import "./output.css"; // Import the global stylesheet
 import App from "./app/index";
-import "./styles.css"; // Import the global stylesheet
 
 document.body.style.margin = "0";
 document.body.style.padding = "0";

@@ -25,6 +25,21 @@ export interface ProductMedia {
     is_hero_media: number;
 }
 
+export interface PDPSection {
+    id: number;
+    product_id: string;
+    section_type: string;
+    title: string;
+    description: string;
+    media_path: string;
+    layout_config: {
+        span?: "small" | "medium" | "large" | "full";
+        align?: "left" | "right" | "center";
+        theme?: "light" | "dark" | "glass";
+    };
+    display_order: number;
+}
+
 export interface Product {
     id: string;
     model_name: string;
@@ -33,6 +48,7 @@ export interface Product {
     persona: Persona | null;
     media: ProductMedia[];
     specs: ProductSpec[];
+    pdp_sections: PDPSection[]; // New field
 }
 
 export interface IElectronAPI {

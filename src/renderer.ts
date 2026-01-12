@@ -26,9 +26,9 @@
  * ```
  */
 
-import './app'
-import './styles.css';
+import "./app";
+import "./output.css";
 
 console.log(
-  '👋 This message is being logged by "renderer.ts", included via Vite',
+    '👋 This message is being logged by "renderer.ts", included via Vite'
 );
